@@ -50,6 +50,11 @@ export const turnoStore = {
     persist();
     notify(event ? [event] : []);
   },
+  reset() {
+    state = createSeedState();
+    persist();
+    notify([{ type: "sync" }]);
+  },
   hydrate() {
     if (hydrated || typeof window === "undefined") return;
     hydrated = true;

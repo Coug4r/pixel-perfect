@@ -6,14 +6,20 @@ const RATINGS: Record<string, [number, string]> = {
 };
 
 export function buildSeedCalificaciones(turnos: Turno[]): Calificacion[] {
-  return turnos
-    .filter((t) => RATINGS[t.id] && t.mecanicoAsignadoId)
-    .map((t) => ({
-      id: `r_${t.id}`,
-      turnoId: t.id,
-      mecanicoId: t.mecanicoAsignadoId!,
-      estrellas: RATINGS[t.id][0],
-      comentario: RATINGS[t.id][1],
-      fecha: t.historial[t.historial.length - 1].fecha,
-    }));
+  const result: Calificacion[] = [];
+  for (const t of turnos) {
+    const data = RATINGS[t.id];
+    if (data && t.mecanicoAsignadoId) {
+      const lastHist = t.historial[t.historial.length - 1];
+      result.push({
+        id: `r_${t.id}`,
+        turnoId: t.id,
+        mecanicoId: t.mecanicoAsignadoId,
+        estrellas: data[0] ?? 5,
+        comentario: data[1] ?? "",
+        fecha: lastHist ? lastHist.fecha : t.creadoEn,
+      });
+    }
+  }
+  return result;
 }

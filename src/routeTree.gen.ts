@@ -10,33 +10,128 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConsultarTurnoRouteImport } from './routes/consultar-turno'
+import { Route as SolicitarTurnoRouteImport } from './routes/solicitar-turno'
+import { Route as MecanicoColaRouteImport } from './routes/mecanico/cola'
+import { Route as MecanicoDashboardRouteImport } from './routes/mecanico/dashboard'
+import { Route as MecanicoHistorialRouteImport } from './routes/mecanico/historial'
+import { Route as MecanicoLoginRouteImport } from './routes/mecanico/login'
+import { Route as MecanicoNotificacionesRouteImport } from './routes/mecanico/notificaciones'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsultarTurnoRoute = ConsultarTurnoRouteImport.update({
+  id: '/consultar-turno',
+  path: '/consultar-turno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
+  id: '/solicitar-turno',
+  path: '/solicitar-turno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MecanicoColaRoute = MecanicoColaRouteImport.update({
+  id: '/mecanico/cola',
+  path: '/mecanico/cola',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MecanicoDashboardRoute = MecanicoDashboardRouteImport.update({
+  id: '/mecanico/dashboard',
+  path: '/mecanico/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MecanicoHistorialRoute = MecanicoHistorialRouteImport.update({
+  id: '/mecanico/historial',
+  path: '/mecanico/historial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MecanicoLoginRoute = MecanicoLoginRouteImport.update({
+  id: '/mecanico/login',
+  path: '/mecanico/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MecanicoNotificacionesRoute = MecanicoNotificacionesRouteImport.update({
+  id: '/mecanico/notificaciones',
+  path: '/mecanico/notificaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/consultar-turno': typeof ConsultarTurnoRoute
+  '/solicitar-turno': typeof SolicitarTurnoRoute
+  '/mecanico/cola': typeof MecanicoColaRoute
+  '/mecanico/dashboard': typeof MecanicoDashboardRoute
+  '/mecanico/historial': typeof MecanicoHistorialRoute
+  '/mecanico/login': typeof MecanicoLoginRoute
+  '/mecanico/notificaciones': typeof MecanicoNotificacionesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/consultar-turno': typeof ConsultarTurnoRoute
+  '/solicitar-turno': typeof SolicitarTurnoRoute
+  '/mecanico/cola': typeof MecanicoColaRoute
+  '/mecanico/dashboard': typeof MecanicoDashboardRoute
+  '/mecanico/historial': typeof MecanicoHistorialRoute
+  '/mecanico/login': typeof MecanicoLoginRoute
+  '/mecanico/notificaciones': typeof MecanicoNotificacionesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/consultar-turno': typeof ConsultarTurnoRoute
+  '/solicitar-turno': typeof SolicitarTurnoRoute
+  '/mecanico/cola': typeof MecanicoColaRoute
+  '/mecanico/dashboard': typeof MecanicoDashboardRoute
+  '/mecanico/historial': typeof MecanicoHistorialRoute
+  '/mecanico/login': typeof MecanicoLoginRoute
+  '/mecanico/notificaciones': typeof MecanicoNotificacionesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/consultar-turno'
+    | '/solicitar-turno'
+    | '/mecanico/cola'
+    | '/mecanico/dashboard'
+    | '/mecanico/historial'
+    | '/mecanico/login'
+    | '/mecanico/notificaciones'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/consultar-turno'
+    | '/solicitar-turno'
+    | '/mecanico/cola'
+    | '/mecanico/dashboard'
+    | '/mecanico/historial'
+    | '/mecanico/login'
+    | '/mecanico/notificaciones'
+  id:
+    | '__root__'
+    | '/'
+    | '/consultar-turno'
+    | '/solicitar-turno'
+    | '/mecanico/cola'
+    | '/mecanico/dashboard'
+    | '/mecanico/historial'
+    | '/mecanico/login'
+    | '/mecanico/notificaciones'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConsultarTurnoRoute: typeof ConsultarTurnoRoute
+  SolicitarTurnoRoute: typeof SolicitarTurnoRoute
+  MecanicoColaRoute: typeof MecanicoColaRoute
+  MecanicoDashboardRoute: typeof MecanicoDashboardRoute
+  MecanicoHistorialRoute: typeof MecanicoHistorialRoute
+  MecanicoLoginRoute: typeof MecanicoLoginRoute
+  MecanicoNotificacionesRoute: typeof MecanicoNotificacionesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +143,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/consultar-turno': {
+      id: '/consultar-turno'
+      path: '/consultar-turno'
+      fullPath: '/consultar-turno'
+      preLoaderRoute: typeof ConsultarTurnoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solicitar-turno': {
+      id: '/solicitar-turno'
+      path: '/solicitar-turno'
+      fullPath: '/solicitar-turno'
+      preLoaderRoute: typeof SolicitarTurnoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mecanico/cola': {
+      id: '/mecanico/cola'
+      path: '/mecanico/cola'
+      fullPath: '/mecanico/cola'
+      preLoaderRoute: typeof MecanicoColaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mecanico/dashboard': {
+      id: '/mecanico/dashboard'
+      path: '/mecanico/dashboard'
+      fullPath: '/mecanico/dashboard'
+      preLoaderRoute: typeof MecanicoDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mecanico/historial': {
+      id: '/mecanico/historial'
+      path: '/mecanico/historial'
+      fullPath: '/mecanico/historial'
+      preLoaderRoute: typeof MecanicoHistorialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mecanico/login': {
+      id: '/mecanico/login'
+      path: '/mecanico/login'
+      fullPath: '/mecanico/login'
+      preLoaderRoute: typeof MecanicoLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mecanico/notificaciones': {
+      id: '/mecanico/notificaciones'
+      path: '/mecanico/notificaciones'
+      fullPath: '/mecanico/notificaciones'
+      preLoaderRoute: typeof MecanicoNotificacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConsultarTurnoRoute: ConsultarTurnoRoute,
+  SolicitarTurnoRoute: SolicitarTurnoRoute,
+  MecanicoColaRoute: MecanicoColaRoute,
+  MecanicoDashboardRoute: MecanicoDashboardRoute,
+  MecanicoHistorialRoute: MecanicoHistorialRoute,
+  MecanicoLoginRoute: MecanicoLoginRoute,
+  MecanicoNotificacionesRoute: MecanicoNotificacionesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

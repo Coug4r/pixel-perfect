@@ -28,13 +28,21 @@ const DIAGS: Record<string, Omit<Diagnostico, "id" | "turnoId" | "mecanicoId" | 
 };
 
 export function buildSeedDiagnosticos(turnos: Turno[]): Diagnostico[] {
-  return turnos
-    .filter((t) => DIAGS[t.id] && t.mecanicoAsignadoId)
-    .map((t) => ({
-      id: `d_${t.id}`,
-      turnoId: t.id,
-      mecanicoId: t.mecanicoAsignadoId!,
-      fecha: t.historial.find((h) => h.estado === "DIAGNOSTICO")?.fecha ?? t.creadoEn,
-      ...DIAGS[t.id],
-    }));
+  const result: Diagnostico[] = [];
+  for (const t of turnos) {
+    const data = DIAGS[t.id];
+    if (data && t.mecanicoAsignadoId) {
+      result.push({
+        id: `d_${t.id}`,
+        turnoId: t.id,
+        mecanicoId: t.mecanicoAsignadoId,
+        fecha: t.historial.find((h) => h.estado === "DIAGNOSTICO")?.fecha ?? t.creadoEn,
+        diagnostico: data.diagnostico,
+        observaciones: data.observaciones,
+        trabajoRealizado: data.trabajoRealizado,
+        recomendaciones: data.recomendaciones,
+      });
+    }
+  }
+  return result;
 }

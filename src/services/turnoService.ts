@@ -52,7 +52,10 @@ function aplicarEstado(state: TallerState, turnoId: string, estado: EstadoTurno,
     ...turno,
     ...patch,
     estado,
-    historial: [...turno.historial, { estado, fecha: new Date().toISOString(), nota }],
+    historial: [
+      ...turno.historial,
+      { estado, fecha: new Date().toISOString(), ...(nota !== undefined ? { nota } : {}) },
+    ],
   };
   const cliente = state.clientes.find((c) => c.id === turno.clienteId)!;
   return {

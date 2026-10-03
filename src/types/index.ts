@@ -31,7 +31,7 @@ export interface Cliente {
 export interface HistorialEstado {
   estado: EstadoTurno;
   fecha: string;
-  nota?: string;
+  nota?: string | undefined;
 }
 
 export interface Turno {

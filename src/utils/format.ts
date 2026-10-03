@@ -11,7 +11,9 @@ export const todayKey = (d = new Date()) =>
 
 /** Convierte "HH:mm" a ISO del día actual. */
 export function horaHoyIso(hhmm: string) {
-  const [h, m] = hhmm.split(":").map(Number);
+  const parts = hhmm.split(":");
+  const h = Number(parts[0] ?? 0);
+  const m = Number(parts[1] ?? 0);
   const d = new Date();
   d.setHours(h, m, 0, 0);
   return d.toISOString();

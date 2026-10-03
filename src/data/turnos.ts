@@ -30,7 +30,8 @@ const ROWS: SeedRow[] = [
 
 export function buildSeedTurnos(base: Date): Turno[] {
   return ROWS.map(([id, numero, clienteId, problema, pref, asig, [h, m], estados]) => {
-    const creado = at(base, h, m);
+    const creado = at(base, h ?? 8, m ?? 0);
+    const ultimoEstado = estados[estados.length - 1] ?? "AGENDADO";
     return {
       id,
       numero,
@@ -38,7 +39,7 @@ export function buildSeedTurnos(base: Date): Turno[] {
       problema,
       mecanicoPreferidoId: pref,
       mecanicoAsignadoId: asig,
-      estado: estados[estados.length - 1],
+      estado: ultimoEstado,
       creadoEn: creado.toISOString(),
       horaProgramada: creado.toISOString(),
       historial: historial(creado, estados),
