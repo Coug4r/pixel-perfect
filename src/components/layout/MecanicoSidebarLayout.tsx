@@ -41,11 +41,14 @@ export function MecanicoSidebarLayout({
 
   const handleLogout = async () => {
     try {
+      toast.success("Sesión cerrada correctamente", {
+        description: "Has salido del sistema con éxito.",
+      });
+      await navigate({ to: "/", replace: true });
       await logout();
-      toast.success("Sesión cerrada correctamente");
-      window.location.replace("/mecanico/login");
     } catch {
-      window.location.replace("/mecanico/login");
+      await logout();
+      window.location.href = "/";
     }
   };
 

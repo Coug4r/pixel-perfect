@@ -154,4 +154,11 @@ describe("Autenticación Desacoplada: Mecánicos y Superadmin", () => {
   it("rechaza contraseñas inválidas", async () => {
     await expect(authService.login("1100000000", "wrongpass")).rejects.toThrow();
   });
+
+  it("cierra sesión y limpia los datos de sesión", async () => {
+    await authService.login("1100000001", "123456");
+    expect(authService.getSession()).not.toBeNull();
+    await authService.logout();
+    expect(authService.getSession()).toBeNull();
+  });
 });

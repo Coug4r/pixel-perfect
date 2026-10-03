@@ -16,7 +16,7 @@ export function ProtectedRoute({ children, rol = "mecanico" }: { children: React
     );
   }
   if (!user) {
-    return <Navigate to="/mecanico/login" search={{ redirect: location.href }} replace />;
+    return <Navigate to="/" replace />;
   }
   if (user.rol !== rol) {
     // If superadmin tries to access mechanic route, redirect to superadmin dashboard

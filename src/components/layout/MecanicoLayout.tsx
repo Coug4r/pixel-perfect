@@ -37,9 +37,16 @@ export function MecanicoLayout({
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
-    toast.success("Sesión cerrada correctamente");
-    navigate({ to: "/mecanico/login" });
+    try {
+      toast.success("Sesión cerrada correctamente", {
+        description: "Has salido del sistema con éxito.",
+      });
+      await navigate({ to: "/", replace: true });
+      await logout();
+    } catch {
+      await logout();
+      window.location.href = "/";
+    }
   };
 
   // Metrics for badges

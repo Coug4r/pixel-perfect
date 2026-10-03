@@ -1,14 +1,29 @@
-import { Link, useLocation } from "@tanstack/react-router";
-import { Wrench, Clock, ShieldCheck, UserCheck, Search, PlusCircle, LogIn, LayoutDashboard } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Wrench, Clock, ShieldCheck, UserCheck, Search, PlusCircle, LogIn, LayoutDashboard, LogOut } from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
 import { useTurnos } from "@/hooks/useTurnos";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export function Navbar() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { turnos } = useTurnos();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      toast.success("Sesión cerrada correctamente", {
+        description: "Has salido del sistema con éxito.",
+      });
+      await navigate({ to: "/", replace: true });
+      await logout();
+    } catch {
+      await logout();
+      window.location.href = "/";
+    }
+  };
 
   const activeTurnosCount = turnos.filter(
     (t) => !["FINALIZADO", "CANCELADO", "NO_ASISTIO"].includes(t.estado)
@@ -82,12 +97,24 @@ export function Navbar() {
           </div>
 
           {isAuthenticated && user ? (
-            <Link to={user.rol === "superadmin" ? "/admin/dashboard" : "/mecanico/dashboard"}>
-              <Button size="sm" className="gap-1.5 bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                <LayoutDashboard className="h-4 w-4 text-primary" />
-                <span className="hidden sm:inline">{user.rol === "superadmin" ? "Admin" : "Portal"}:</span> {user.nombre.split(" ")[0]}
+            <div className="flex items-center gap-1.5">
+              <Link to={user.rol === "superadmin" ? "/admin/dashboard" : "/mecanico/dashboard"}>
+                <Button size="sm" className="gap-1.5 bg-secondary text-secondary-foreground hover:bg-secondary/90">
+                  <LayoutDashboard className="h-4 w-4 text-primary" />
+                  <span className="hidden sm:inline">{user.rol === "superadmin" ? "Admin" : "Portal"}:</span> {user.nombre.split(" ")[0]}
+                </Button>
+              </Link>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleLogout}
+                className="gap-1 px-2.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                title="Cerrar Sesión"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Salir</span>
               </Button>
-            </Link>
+            </div>
           ) : (
             <Link to="/mecanico/login">
               <Button size="sm" variant="outline" className="gap-1.5 border-border hover:bg-muted text-xs">
