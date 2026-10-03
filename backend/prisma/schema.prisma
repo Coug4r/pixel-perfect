@@ -1,0 +1,239 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum RolUsuario {
+  MECANICO
+  SUPERADMIN
+}
+
+enum TipoIdentificacion {
+  CEDULA
+  PASAPORTE
+}
+
+enum EstadoMecanico {
+  DISPONIBLE
+  EN_ATENCION
+  FUERA_DE_SERVICIO
+}
+
+enum EstadoTurno {
+  AGENDADO
+  EN_ESPERA
+  LLAMADO
+  EN_ATENCION
+  DIAGNOSTICO
+  LISTO
+  FINALIZADO
+  NO_ASISTIO
+  REAGENDADO
+  CANCELADO
+}
+
+enum AccionHistorial {
+  TURNO_CREADO
+  TURNO_ASIGNADO
+  TURNO_TOMADO
+  ATENCION_INICIADA
+  DIAGNOSTICO_AGREGADO
+  DIAGNOSTICO_EDITADO
+  TURNO_LISTO
+  TURNO_FINALIZADO
+  NO_ASISTIO
+  TURNO_REAGENDADO
+  TURNO_CANCELADO
+}
+
+enum TipoNotificacion {
+  TURNO_CREADO
+  MECANICO_DISPONIBLE
+  DIAGNOSTICO
+  VEHICULO_LISTO
+  TURNO_FINALIZADO
+  REAGENDADO
+}
+
+enum CanalNotificacion {
+  APP
+  MOCK_WHATSAPP
+}
+
+// -------------------------------------------------------------
+// MODELOS
+// -------------------------------------------------------------
+
+model Usuario {
+  id                 String             @id @default(uuid())
+  identificacion     String             @unique
+  tipoIdentificacion TipoIdentificacion @default(CEDULA)
+  nombre             String
+  apellido           String
+  celular            String
+  email              String             @unique
+  passwordHash       String
+  rol                RolUsuario
+  activo             Boolean            @default(true)
+  disponible         EstadoMecanico     @default(DISPONIBLE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relaciones
+  turnosPreferidos   Turno[]            @relation("MecanicoPreferido")
+  turnosAsignados    Turno[]            @relation("MecanicoAsignado")
+  diagnosticos       Diagnostico[]
+  calificaciones     Calificacion[]
+  historiales        HistorialTurno[]
+
+  @@index([identificacion])
+  @@index([email])
+  @@index([rol])
+}
+
+model Cliente {
+  id                 String             @id @default(uuid())
+  identificacion     String             @unique
+  tipoIdentificacion TipoIdentificacion @default(CEDULA)
+  nombre             String
+  celular            String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relaciones
+  vehiculos          Vehiculo[]
+  turnos             Turno[]
+  calificaciones     Calificacion[]
+
+  @@index([identificacion])
+}
+
+model Vehiculo {
+  id        String   @id @default(uuid())
+  placa     String   @unique
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  marca     String?
+  modelo    String?
+  anio      Int?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turnos    Turno[]
+
+  @@index([placa])
+  @@index([clienteId])
+}
+
+model Turno {
+  id                  String           @id @default(uuid())
+  numero              Int
+  fecha               DateTime         @default(now())
+  clienteId           String
+  cliente             Cliente          @relation(fields: [clienteId], references: [id])
+  vehiculoId          String
+  vehiculo            Vehiculo         @relation(fields: [vehiculoId], references: [id])
+  mecanicoPreferidoId String?
+  mecanicoPreferido   Usuario?         @relation("MecanicoPreferido", fields: [mecanicoPreferidoId], references: [id])
+  mecanicoId          String?
+  mecanicoAsignado    Usuario?         @relation("MecanicoAsignado", fields: [mecanicoId], references: [id])
+  motivo              String
+  estado              EstadoTurno      @default(AGENDADO)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  // Relaciones
+  diagnosticos        Diagnostico[]
+  calificacion        Calificacion?
+  historial           HistorialTurno[]
+  notificaciones      Notificacion[]
+
+  @@index([numero])
+  @@index([fecha])
+  @@index([estado])
+  @@index([clienteId])
+  @@index([vehiculoId])
+  @@index([mecanicoId])
+  @@index([updatedAt])
+}
+
+// Secuencia atómica para asignación segura de número de turno por día
+model TurnoSecuenciaDiaria {
+  fechaStr     String   @id // Formato YYYY-MM-DD
+  ultimoNumero Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
+model Diagnostico {
+  id               String   @id @default(uuid())
+  turnoId          String
+  turno            Turno    @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+  mecanicoId       String
+  mecanico         Usuario  @relation(fields: [mecanicoId], references: [id])
+  descripcion      String
+  observaciones    String?
+  trabajoRealizado String?
+  recomendaciones  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([turnoId])
+  @@index([mecanicoId])
+}
+
+model Calificacion {
+  id         String   @id @default(uuid())
+  turnoId    String   @unique
+  turno      Turno    @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+  mecanicoId String
+  mecanico   Usuario  @relation(fields: [mecanicoId], references: [id])
+  clienteId  String
+  cliente    Cliente  @relation(fields: [clienteId], references: [id])
+  estrellas  Int      // De 1 a 5
+  comentario String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([mecanicoId])
+  @@index([clienteId])
+  @@index([estrellas])
+}
+
+model HistorialTurno {
+  id             String          @id @default(uuid())
+  turnoId        String
+  turno          Turno           @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+  usuarioId      String?
+  usuario        Usuario?        @relation(fields: [usuarioId], references: [id])
+  accion         AccionHistorial
+  estadoAnterior EstadoTurno?
+  estadoNuevo    EstadoTurno?
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+
+  @@index([turnoId])
+  @@index([usuarioId])
+  @@index([createdAt])
+}
+
+model Notificacion {
+  id        String            @id @default(uuid())
+  turnoId   String
+  turno     Turno             @relation(fields: [turnoId], references: [id], onDelete: Cascade)
+  tipo      TipoNotificacion
+  mensaje   String
+  canal     CanalNotificacion @default(APP)
+  leida     Boolean           @default(false)
+  createdAt DateTime          @default(now())
+
+  @@index([turnoId])
+}

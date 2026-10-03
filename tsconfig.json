@@ -6,6 +6,11 @@
     "vitest.config.ts",
     "eslint.config.js"
   ],
+  "exclude": [
+    "backend",
+    "node_modules",
+    "dist"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
