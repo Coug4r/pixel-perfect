@@ -40,9 +40,13 @@ export function MecanicoSidebarLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    toast.success("Sesión finalizada correctamente");
-    navigate({ to: "/mecanico/login", replace: true });
+    try {
+      await logout();
+      toast.success("Sesión cerrada correctamente");
+      window.location.replace("/mecanico/login");
+    } catch {
+      window.location.replace("/mecanico/login");
+    }
   };
 
   const turnosPendientesCount = turnos.filter(

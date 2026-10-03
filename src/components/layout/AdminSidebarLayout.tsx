@@ -41,9 +41,13 @@ export function AdminSidebarLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    toast.success("Sesión administrativa cerrada");
-    navigate({ to: "/mecanico/login", replace: true });
+    try {
+      await logout();
+      toast.success("Sesión administrativa cerrada");
+      window.location.replace("/mecanico/login");
+    } catch {
+      window.location.replace("/mecanico/login");
+    }
   };
 
   const navItems = [

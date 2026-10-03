@@ -56,10 +56,11 @@ class MockAuthService implements AuthService {
   }
 
   async logout() {
-    localStorage.removeItem(SESSION_KEY);
-    // Clear any private storage keys if needed
     try {
+      localStorage.removeItem(SESSION_KEY);
       sessionStorage.clear();
+      // Dispatch storage event so other tabs/listeners update immediately
+      window.dispatchEvent(new Event("storage"));
     } catch {}
   }
 

@@ -45,9 +45,11 @@ function MecanicoLoginPage() {
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.rol === "superadmin") {
-        navigate({ to: redirect || "/admin/dashboard", replace: true });
+        const dest = redirect && redirect.startsWith("/admin") ? redirect : "/admin/dashboard";
+        navigate({ to: dest, replace: true });
       } else {
-        navigate({ to: redirect || "/mecanico/dashboard", replace: true });
+        const dest = redirect && redirect.startsWith("/mecanico") ? redirect : "/mecanico/dashboard";
+        navigate({ to: dest, replace: true });
       }
     }
   }, [isAuthenticated, user, redirect, navigate]);
@@ -66,9 +68,11 @@ function MecanicoLoginPage() {
       const session = await login(cedula.trim(), password);
       toast.success(`¡Bienvenido, ${session.user.nombre}!`);
       if (session.user.rol === "superadmin") {
-        navigate({ to: redirect || "/admin/dashboard", replace: true });
+        const dest = redirect && redirect.startsWith("/admin") ? redirect : "/admin/dashboard";
+        navigate({ to: dest, replace: true });
       } else {
-        navigate({ to: redirect || "/mecanico/dashboard", replace: true });
+        const dest = redirect && redirect.startsWith("/mecanico") ? redirect : "/mecanico/dashboard";
+        navigate({ to: dest, replace: true });
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Credenciales incorrectas.");

@@ -8,6 +8,7 @@ import { TurnoCard } from "@/components/turnos/TurnoCard";
 import { DiagnosticoDialog } from "@/components/turnos/DiagnosticoDialog";
 import { ReagendarDialog } from "@/components/turnos/ReagendarDialog";
 import { DetallesTurnoDialog } from "@/components/turnos/DetallesTurnoDialog";
+import { EstadoBadge } from "@/components/turnos/EstadoBadge";
 import type { Turno } from "@/types";
 import { 
   Clock, 
@@ -73,23 +74,13 @@ function MecanicoDashboardPage() {
     }
   };
 
-  const handleTomarTurno = (turnoId: string) => {
+  const handleLlamarCliente = (turnoId: string) => {
     if (!user) return;
     try {
-      actions.tomarTurno(turnoId, user.id);
-      toast.success("Turno asignado a tu estación de trabajo.");
+      actions.cambiarEstado(turnoId, user.id, "LLAMADO");
+      toast.success("¡Cliente llamado al taller para iniciar atención!");
     } catch (err: any) {
-      toast.error(err.message || "Error al tomar el turno.");
-    }
-  };
-
-  const handleCambiarEstado = (turnoId: string, nuevoEstado: any) => {
-    if (!user) return;
-    try {
-      actions.cambiarEstado(turnoId, user.id, nuevoEstado);
-      toast.success(`Estado actualizado a ${nuevoEstado}`);
-    } catch (err: any) {
-      toast.error(err.message || "Error al cambiar de estado.");
+      toast.error(err.message || "Error al llamar al cliente.");
     }
   };
 
@@ -102,14 +93,14 @@ function MecanicoDashboardPage() {
           {primerGeneral && (
             <Button
               onClick={handleTomarSiguiente}
-              className="gap-1.5 bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-sm min-h-[38px]"
+              className="gap-1.5 bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs shadow-md min-h-[40px] px-4"
             >
               <Wrench className="h-4 w-4" />
               <span>Tomar Turno General #{formatNumero(primerGeneral.numero)}</span>
             </Button>
           )}
           <Link to="/mecanico/turnos">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs min-h-[38px] font-semibold">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs min-h-[40px] font-semibold">
               <ListOrdered className="h-4 w-4" />
               <span>Ver Todos los Turnos</span>
             </Button>
@@ -171,7 +162,7 @@ function MecanicoDashboardPage() {
                   {turnosColaGeneral.length}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Disponibles para tomar inmediatamente
+                  Asignación disponible solo con el botón superior
                 </p>
               </div>
               <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
@@ -189,11 +180,11 @@ function MecanicoDashboardPage() {
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-primary" />
                 <h2 className="font-display text-xl font-bold tracking-tight text-foreground">
-                  Turnos Pendientes Asignados a Mí ({misTurnosDirectos.length})
+                  Turnos Pendientes Asignados ({misTurnosDirectos.length})
                 </h2>
               </div>
               <span className="text-xs text-muted-foreground font-medium">
-                Organizados por última modificación
+                Acción operativa: Llamar Cliente
               </span>
             </div>
 
@@ -202,54 +193,88 @@ function MecanicoDashboardPage() {
                 <Wrench className="h-10 w-10 mx-auto text-muted-foreground mb-2 opacity-50" />
                 <p className="font-semibold text-foreground text-sm">No tienes turnos pendientes asignados</p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Puedes tomar un turno de la cola general disponible para iniciar una nueva atención.
+                  Utiliza el botón superior para tomar el siguiente turno general disponible.
                 </p>
-                {primerGeneral && (
-                  <Button onClick={handleTomarSiguiente} size="sm" className="mt-4 gap-1.5 bg-primary text-primary-foreground text-xs font-bold min-h-[40px]">
-                    Tomar Turno General #{formatNumero(primerGeneral.numero)}
-                  </Button>
-                )}
               </Card>
             ) : (
               <div className="space-y-3.5">
                 {misTurnosDirectos.map((turno) => {
                   const cliente = clientes.find((c) => c.id === turno.clienteId);
-                  const mecPref = mecanicos.find((m) => m.id === turno.mecanicoPreferidoId);
-                  const mecAsig = mecanicos.find((m) => m.id === turno.mecanicoAsignadoId);
-                  const diag = diagnosticos.find((d) => d.turnoId === turno.id);
 
                   return (
-                    <TurnoCard
-                      key={turno.id}
-                      turno={turno}
-                      cliente={cliente}
-                      mecanicoPreferido={mecPref}
-                      mecanicoAsignado={mecAsig}
-                      diagnostico={diag}
-                      currentMecanicoId={user?.id}
-                      onCambiarEstado={handleCambiarEstado}
-                      onAbrirDiagnostico={(t) => setDiagnosticoModalTurno(t)}
-                      onAbrirReagendar={(t) => setReagendarModalTurno(t)}
-                      onVerDetalles={(t) => setDetallesModalTurno(t)}
-                    />
+                    <Card key={turno.id} className="border border-border/80 bg-card shadow-xs hover:border-primary/40 transition-all">
+                      <CardContent className="p-4 sm:p-5 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+                          <div className="flex items-center gap-2.5">
+                            <span className="font-display text-lg font-black text-primary">
+                              TURNO #{formatNumero(turno.numero)}
+                            </span>
+                            <span className="font-mono font-bold text-xs bg-muted px-2 py-0.5 rounded border border-border">
+                              {turno.placa}
+                            </span>
+                            <EstadoBadge estado={turno.estado} size="sm" />
+                          </div>
+
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
+                            <Clock className="h-3.5 w-3.5" />
+                            <span>Hora: {formatHora(turno.horaProgramada)}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <span className="text-muted-foreground block text-[10px] uppercase font-bold">Cliente:</span>
+                            <span className="font-bold text-foreground text-sm">{cliente?.nombre || "Cliente"}</span>
+                            {cliente?.celular && (
+                              <p className="font-mono text-muted-foreground text-[11px] mt-0.5">Tel: {cliente.celular}</p>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-[10px] uppercase font-bold">Problema Reportado:</span>
+                            <p className="text-foreground/90 font-medium line-clamp-2">{turno.problema}</p>
+                          </div>
+                        </div>
+
+                        {/* Operational Actions strictly: LLAMAR CLIENTE and DETALLES */}
+                        <div className="flex items-center justify-between pt-2 border-t border-border/60">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDetallesModalTurno(turno)}
+                            className="text-xs gap-1 h-9"
+                          >
+                            <span>Detalles</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            onClick={() => handleLlamarCliente(turno.id)}
+                            className="gap-2 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wide h-9 px-4 shadow-sm"
+                          >
+                            <AlertCircle className="h-4 w-4" />
+                            <span>Llamar Cliente</span>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
                   );
                 })}
               </div>
             )}
           </div>
 
-          {/* Right Column: Turnos en Cola General Disponibles (4 cols) */}
+          {/* Right Column: Turnos en Cola General Disponibles (4 cols) - NO extra assign buttons */}
           <div className="lg:col-span-4 space-y-4">
             <Card className="border border-amber-500/30 bg-card shadow-sm">
               <CardHeader className="py-3.5 px-4 bg-amber-500/10 border-b border-amber-500/20">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
                     <Sparkles className="h-4 w-4 text-amber-600" />
-                    <span>Cola General Disponible ({turnosColaGeneral.length})</span>
+                    <span>Cola General ({turnosColaGeneral.length})</span>
                   </CardTitle>
                 </div>
                 <CardDescription className="text-[11px] text-muted-foreground">
-                  Turnos sin mecánico asignado, listos para ser tomados por cualquier técnico libre.
+                  Turnos sin asignar. Para asignar, utiliza el botón superior.
                 </CardDescription>
               </CardHeader>
 
@@ -266,7 +291,7 @@ function MecanicoDashboardPage() {
                     return (
                       <div
                         key={t.id}
-                        className={`rounded-lg p-3 border text-xs space-y-2 transition-all ${
+                        className={`rounded-lg p-3 border text-xs space-y-1.5 transition-all ${
                           isFirst
                             ? "border-primary/50 bg-primary/5 shadow-xs"
                             : "border-border bg-muted/30"
@@ -290,27 +315,22 @@ function MecanicoDashboardPage() {
                           {cliente?.nombre || "Cliente"}
                         </p>
 
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 italic">
+                        <p className="text-[11px] text-muted-foreground line-clamp-1 italic">
                           "{t.problema}"
                         </p>
 
-                        <div className="flex items-center justify-between pt-1 gap-2 border-t border-border/50">
+                        <div className="flex items-center justify-between pt-1 border-t border-border/40">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setDetallesModalTurno(t)}
                             className="h-7 text-[11px] px-2 text-muted-foreground hover:text-foreground"
                           >
-                            Detalles
+                            Ver Detalles
                           </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleTomarTurno(t.id)}
-                            className="h-7 text-[11px] gap-1 bg-primary text-primary-foreground font-bold hover:bg-primary/90"
-                          >
-                            <Wrench className="h-3 w-3" />
-                            <span>Tomar Turno</span>
-                          </Button>
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {isFirst ? "⚡ Siguiente en cola" : `Posición #${idx + 1}`}
+                          </span>
                         </div>
                       </div>
                     );

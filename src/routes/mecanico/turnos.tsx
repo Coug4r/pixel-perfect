@@ -62,13 +62,10 @@ function MecanicoTurnosPage() {
     return turnos.filter((t) => ["AGENDADO", "EN_ESPERA", "LLAMADO", "REAGENDADO", "EN_ATENCION"].includes(t.estado));
   }, [turnos]);
 
-  // 2. DIAGNOSTICADOS: Shifts with 1 or more diagnostics
+  // 2. DIAGNOSTICADOS: Strictly shifts with estado === "DIAGNOSTICO"
   const turnosDiagnosticados = useMemo(() => {
-    return turnos.filter((t) => {
-      const diags = getDiagnosticos(t.id);
-      return diags.length > 0 || t.estado === "DIAGNOSTICO" || t.estado === "LISTO";
-    });
-  }, [turnos, getDiagnosticos]);
+    return turnos.filter((t) => t.estado === "DIAGNOSTICO");
+  }, [turnos]);
 
   // 3. FINALIZADOS: Completed shifts
   const turnosFinalizados = useMemo(() => {
@@ -111,6 +108,16 @@ function MecanicoTurnosPage() {
       toast.success(`Estado del turno actualizado a ${nuevoEstado}`);
     } catch (err: any) {
       toast.error(err.message || "Error al cambiar de estado.");
+    }
+  };
+
+  const handleFinalizarTurno = (turnoId: string, num: number) => {
+    if (!user) return;
+    try {
+      actions.cambiarEstado(turnoId, user.id, "FINALIZADO");
+      toast.success(`Turno #${formatNumero(num)} finalizado y trasladado a Finalizados.`);
+    } catch (err: any) {
+      toast.error(err.message || "Error al finalizar el turno.");
     }
   };
 
@@ -270,7 +277,15 @@ function MecanicoTurnosPage() {
                             )}
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center">
+                            <Button
+                              size="sm"
+                              onClick={() => handleFinalizarTurno(turno.id, turno.numero)}
+                              className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold min-h-[36px] shadow-xs"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>Finalizar Turno</span>
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -281,9 +296,10 @@ function MecanicoTurnosPage() {
                               <span>+ Agregar Diagnóstico</span>
                             </Button>
                             <Button
+                              variant="secondary"
                               size="sm"
                               onClick={() => setDetallesModalTurno(turno)}
-                              className="text-xs gap-1.5 bg-primary text-primary-foreground font-bold hover:bg-primary/90 min-h-[36px]"
+                              className="text-xs gap-1.5 min-h-[36px] font-semibold"
                             >
                               <Info className="h-3.5 w-3.5" />
                               <span>Detalles</span>
