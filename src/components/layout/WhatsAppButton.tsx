@@ -82,7 +82,7 @@ export function WhatsAppButton() {
               <>
                 <div className="rounded-lg bg-white dark:bg-zinc-800 p-3.5 shadow-xs text-xs space-y-1.5 border border-border/60">
                   <p className="font-semibold text-foreground">
-                    ¡Hola! 👋 ¿En qué podemos ayudarte hoy con tu vehículo?
+                    ¡Hola! ¿En qué podemos ayudarte hoy con tu vehículo?
                   </p>
                   <p className="text-muted-foreground text-[11px] leading-relaxed">
                     Puedes consultarnos sobre tiempos de espera, disponibilidad de mecánicos, repuestos o dudas sobre tu turno.

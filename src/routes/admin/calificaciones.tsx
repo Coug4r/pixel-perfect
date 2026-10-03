@@ -13,8 +13,12 @@ import {
   MessageSquare,
   Sparkles,
   CheckCircle2,
-  Calendar
+  Calendar,
+  FileText,
+  ArrowRight
 } from "lucide-react";
+import { DetallesTurnoDialog } from "@/components/turnos/DetallesTurnoDialog";
+import type { Turno, Calificacion } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -29,16 +33,15 @@ export const Route = createFileRoute("/admin/calificaciones")({
 });
 
 function AdminCalificacionesPage() {
-  const { calificaciones, turnos, clientes, mecanicos } = useTurnos();
+  const { calificaciones, turnos, clientes, mecanicos, getDiagnosticos } = useTurnos();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMecanico, setSelectedMecanico] = useState<string>("all");
   const [selectedStars, setSelectedStars] = useState<string>("all");
 
-  const totalReviews = calificaciones.length;
-  const avgRating = totalReviews > 0
-    ? (calificaciones.reduce((acc, c) => acc + c.estrellas, 0) / totalReviews).toFixed(1)
-    : "5.0";
+  const [selectedTurnoDetalle, setSelectedTurnoDetalle] = useState<Turno | null>(null);
+  const [selectedReviewDetalle, setSelectedReviewDetalle] = useState<Calificacion | null>(null);
+  const [detallesModalOpen, setDetallesModalOpen] = useState(false);
 
   // Enriched reviews with shift and client info
   const enrichedReviews = useMemo(() => {
@@ -56,6 +59,27 @@ function AdminCalificacionesPage() {
       };
     });
   }, [calificaciones, turnos, clientes, mecanicos]);
+
+  const handleOpenReviewDetails = (rev: (typeof enrichedReviews)[0]) => {
+    const turnoEncontrado = rev.turno || turnos.find((t) => t.id === rev.turnoId) || null;
+    if (turnoEncontrado) {
+      setSelectedTurnoDetalle(turnoEncontrado);
+      setSelectedReviewDetalle({
+        id: rev.id,
+        turnoId: rev.turnoId,
+        mecanicoId: rev.mecanicoId,
+        estrellas: rev.estrellas,
+        comentario: rev.comentario,
+        fecha: rev.fecha,
+      });
+      setDetallesModalOpen(true);
+    }
+  };
+
+  const totalReviews = calificaciones.length;
+  const avgRating = totalReviews > 0
+    ? (calificaciones.reduce((acc, c) => acc + c.estrellas, 0) / totalReviews).toFixed(1)
+    : "5.0";
 
   // Filtered reviews
   const filteredReviews = useMemo(() => {
@@ -169,7 +193,7 @@ function AdminCalificacionesPage() {
                     <SelectValue placeholder="Mecánico" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">👨‍🔧 Todos los mecánicos</SelectItem>
+                    <SelectItem value="all">Todos los mecánicos</SelectItem>
                     {mecanicos.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.nombre}
@@ -185,12 +209,12 @@ function AdminCalificacionesPage() {
                     <SelectValue placeholder="Estrellas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">⭐ Todas las calificaciones</SelectItem>
-                    <SelectItem value="5">⭐⭐⭐⭐⭐ (5 estrellas)</SelectItem>
-                    <SelectItem value="4">⭐⭐⭐⭐ (4 estrellas)</SelectItem>
-                    <SelectItem value="3">⭐⭐⭐ (3 estrellas)</SelectItem>
-                    <SelectItem value="2">⭐⭐ (2 estrellas)</SelectItem>
-                    <SelectItem value="1">⭐ (1 estrella)</SelectItem>
+                    <SelectItem value="all">Todas las calificaciones</SelectItem>
+                    <SelectItem value="5">5 estrellas</SelectItem>
+                    <SelectItem value="4">4 estrellas</SelectItem>
+                    <SelectItem value="3">3 estrellas</SelectItem>
+                    <SelectItem value="2">2 estrellas</SelectItem>
+                    <SelectItem value="1">1 estrella</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -212,7 +236,11 @@ function AdminCalificacionesPage() {
             </Card>
           ) : (
             filteredReviews.map((rev) => (
-              <Card key={rev.id} className="border border-border bg-card shadow-xs hover:border-amber-500/40 transition-all">
+              <Card
+                key={rev.id}
+                onClick={() => handleOpenReviewDetails(rev)}
+                className="border border-border bg-card shadow-xs hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group"
+              >
                 <CardContent className="p-4 sm:p-5 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
                     <div className="flex items-center gap-3">
@@ -267,12 +295,40 @@ function AdminCalificacionesPage() {
                       {rev.mecanico ? `${rev.mecanico.nombre} (${rev.mecanico.iniciales})` : "Asignado"}
                     </div>
                   </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs">
+                    <div className="flex items-center gap-1.5 text-primary font-semibold group-hover:underline">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>Ver descripción completa del turno y diagnósticos</span>
+                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      Click para abrir
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
             ))
           )}
         </div>
       </div>
+
+      <DetallesTurnoDialog
+        open={detallesModalOpen}
+        onOpenChange={setDetallesModalOpen}
+        turno={selectedTurnoDetalle}
+        cliente={
+          clientes.find((c) => c.id === selectedTurnoDetalle?.clienteId)
+        }
+        mecanico={
+          mecanicos.find((m) => m.id === selectedTurnoDetalle?.mecanicoAsignadoId)
+        }
+        diagnosticos={
+          selectedTurnoDetalle ? getDiagnosticos(selectedTurnoDetalle.id) : []
+        }
+        calificacion={selectedReviewDetalle || undefined}
+        isSuperadmin={true}
+      />
     </AdminSidebarLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { MecanicoSidebarLayout } from "@/components/layout/MecanicoSidebarLayout";
@@ -17,7 +17,9 @@ import {
   ListOrdered,
   PlusCircle,
   AlertCircle,
-  Car
+  Car,
+  Zap,
+  ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -33,6 +35,7 @@ export const Route = createFileRoute("/mecanico/dashboard")({
 });
 
 function MecanicoDashboardPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { 
     turnos, 
@@ -184,7 +187,7 @@ function MecanicoDashboardPage() {
                 </h2>
               </div>
               <span className="text-xs text-muted-foreground font-medium">
-                Acción operativa: Llamar Cliente
+                Click en un turno para gestionarlo
               </span>
             </div>
 
@@ -202,7 +205,11 @@ function MecanicoDashboardPage() {
                   const cliente = clientes.find((c) => c.id === turno.clienteId);
 
                   return (
-                    <Card key={turno.id} className="border border-border/80 bg-card shadow-xs hover:border-primary/40 transition-all">
+                    <Card
+                      key={turno.id}
+                      onClick={() => navigate({ to: "/mecanico/turnos" })}
+                      className="border border-border/80 bg-card shadow-xs hover:border-primary/60 hover:shadow-md transition-all cursor-pointer group"
+                    >
                       <CardContent className="p-4 sm:p-5 space-y-3">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
                           <div className="flex items-center gap-2.5">
@@ -235,25 +242,14 @@ function MecanicoDashboardPage() {
                           </div>
                         </div>
 
-                        {/* Operational Actions strictly: LLAMAR CLIENTE and DETALLES */}
-                        <div className="flex items-center justify-between pt-2 border-t border-border/60">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setDetallesModalTurno(turno)}
-                            className="text-xs gap-1 h-9"
-                          >
-                            <span>Detalles</span>
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            onClick={() => handleLlamarCliente(turno.id)}
-                            className="gap-2 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-wide h-9 px-4 shadow-sm"
-                          >
-                            <AlertCircle className="h-4 w-4" />
-                            <span>Llamar Cliente</span>
-                          </Button>
+                        <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs font-semibold text-primary">
+                          <span className="flex items-center gap-1.5 group-hover:underline">
+                            Ir a pantalla de Turnos
+                            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                          </span>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            Click para atender
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
@@ -291,7 +287,8 @@ function MecanicoDashboardPage() {
                     return (
                       <div
                         key={t.id}
-                        className={`rounded-lg p-3 border text-xs space-y-1.5 transition-all ${
+                        onClick={() => navigate({ to: "/mecanico/turnos" })}
+                        className={`rounded-lg p-3 border text-xs space-y-1.5 transition-all cursor-pointer hover:border-primary/60 hover:shadow-xs group ${
                           isFirst
                             ? "border-primary/50 bg-primary/5 shadow-xs"
                             : "border-border bg-muted/30"
@@ -320,16 +317,18 @@ function MecanicoDashboardPage() {
                         </p>
 
                         <div className="flex items-center justify-between pt-1 border-t border-border/40">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDetallesModalTurno(t)}
-                            className="h-7 text-[11px] px-2 text-muted-foreground hover:text-foreground"
-                          >
-                            Ver Detalles
-                          </Button>
-                          <span className="text-[10px] text-muted-foreground font-medium">
-                            {isFirst ? "⚡ Siguiente en cola" : `Posición #${idx + 1}`}
+                          <span className="text-[11px] text-primary font-medium flex items-center gap-1 group-hover:underline">
+                            Ir a Turnos <ArrowRight className="h-3 w-3" />
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-medium inline-flex items-center gap-1">
+                            {isFirst ? (
+                              <>
+                                <Zap className="h-3 w-3 text-amber-500" />
+                                <span>Siguiente en cola</span>
+                              </>
+                            ) : (
+                              `Posición #${idx + 1}`
+                            )}
                           </span>
                         </div>
                       </div>

@@ -63,8 +63,9 @@ export function DetallesTurnoDialog({
               <EstadoBadge estado={turno.estado} size="default" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="rounded-md border border-border bg-muted/60 px-2.5 py-1 font-mono font-bold text-xs text-foreground">
-                🚗 Placa: {turno.placa}
+              <span className="rounded-md border border-border bg-muted/60 px-2.5 py-1 font-mono font-bold text-xs text-foreground inline-flex items-center gap-1.5">
+                <Car className="h-3.5 w-3.5 text-primary" />
+                <span>Placa: {turno.placa}</span>
               </span>
             </div>
           </div>

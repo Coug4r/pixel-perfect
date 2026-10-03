@@ -17,7 +17,8 @@ import {
   XCircle,
   Play,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Zap
 } from "lucide-react";
 import { formatHora, formatNumero } from "@/utils/format";
 
@@ -76,8 +77,9 @@ export function TurnoCard({
             TURNO #{formatNumero(turno.numero)}
           </span>
           {isGeneralUnassigned ? (
-            <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-bold text-amber-900 dark:text-amber-200">
-              ⚡ Cola General — Sin Preferencia
+            <span className="inline-flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 dark:text-amber-200">
+              <Zap className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+              <span>Cola General — Sin Preferencia</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-[11px] text-foreground/80">

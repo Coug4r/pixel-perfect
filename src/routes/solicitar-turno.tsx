@@ -415,7 +415,7 @@ function SolicitarTurnoPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none" className="font-semibold text-primary">
-                        ⚡ Sin preferencia — Asignar al primer mecánico disponible
+                        Sin preferencia — Asignar al primer mecánico disponible
                       </SelectItem>
                       {mecanicos.map((m) => (
                         <SelectItem key={m.id} value={m.id}>

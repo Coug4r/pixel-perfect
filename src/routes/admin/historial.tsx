@@ -98,7 +98,7 @@ function AdminHistorialPage() {
                     <SelectValue placeholder="Todos los mecánicos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">👨‍🔧 Todos los mecánicos</SelectItem>
+                    <SelectItem value="all">Todos los mecánicos</SelectItem>
                     {mecanicos.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.nombre}
@@ -115,7 +115,7 @@ function AdminHistorialPage() {
                     <SelectValue placeholder="Todos los estados" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">📊 Todos los estados</SelectItem>
+                    <SelectItem value="all">Todos los estados</SelectItem>
                     <SelectItem value="FINALIZADO">FINALIZADO</SelectItem>
                     <SelectItem value="LISTO">LISTO</SelectItem>
                     <SelectItem value="DIAGNOSTICO">DIAGNOSTICO</SelectItem>
