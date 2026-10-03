@@ -53,8 +53,8 @@ export function MecanicoSidebarLayout({
   };
 
   const turnosPendientesCount = turnos.filter(
-    (t) => (t.mecanicoAsignadoId === user?.id || !t.mecanicoAsignadoId) &&
-      ["AGENDADO", "EN_ESPERA", "LLAMADO", "REAGENDADO"].includes(t.estado)
+    (t) => t.mecanicoAsignadoId === user?.id &&
+      ["AGENDADO", "EN_ESPERA", "LLAMADO", "REAGENDADO", "EN_ATENCION"].includes(t.estado)
   ).length;
 
   const navItems = [

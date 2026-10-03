@@ -46,6 +46,9 @@ function MecanicoHistorialPage() {
   const [selectedTurnoDetalle, setSelectedTurnoDetalle] = useState<Turno | null>(null);
 
   const filteredHistorial = turnos.filter((t) => {
+    // Solo turnos asignados al mecánico autenticado
+    if (t.mecanicoAsignadoId !== user?.id) return false;
+
     const c = clientes.find((cli) => cli.id === t.clienteId);
     const matchesSearch =
       searchTerm.trim() === "" ||

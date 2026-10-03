@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
+import { useAuth } from "@/auth/AuthContext";
 import { MecanicoLayout } from "@/components/layout/MecanicoLayout";
 import { useTurnos } from "@/hooks/useTurnos";
 import { EstadoBadge } from "@/components/turnos/EstadoBadge";
@@ -34,15 +35,17 @@ export const Route = createFileRoute("/mecanico/notificaciones")({
 });
 
 function MecanicoNotificacionesPage() {
+  const { user } = useAuth();
   const { notificaciones, turnos, clientes, mecanicos } = useTurnos();
-  const [selectedTurnoId, setSelectedTurnoId] = useState<string>(turnos[0]?.id || "");
+  const misTurnos = turnos.filter((t) => t.mecanicoAsignadoId === user?.id);
+  const [selectedTurnoId, setSelectedTurnoId] = useState<string>(misTurnos[0]?.id || "");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const selectedTurno = turnos.find((t) => t.id === selectedTurnoId);
+  const selectedTurno = misTurnos.find((t) => t.id === selectedTurnoId);
   const selectedCliente = selectedTurno ? clientes.find((c) => c.id === selectedTurno.clienteId) : undefined;
   const turnosNotifs = selectedTurno ? notificaciones.filter((n) => n.turnoId === selectedTurno.id) : [];
 
-  const filteredTurnos = turnos.filter((t) => {
+  const filteredTurnos = misTurnos.filter((t) => {
     const c = clientes.find((cli) => cli.id === t.clienteId);
     return (
       searchTerm.trim() === "" ||

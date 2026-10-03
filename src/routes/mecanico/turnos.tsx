@@ -56,21 +56,27 @@ function MecanicoTurnosPage() {
   const [reagendarModalTurno, setReagendarModalTurno] = useState<Turno | null>(null);
   const [detallesModalTurno, setDetallesModalTurno] = useState<Turno | null>(null);
 
-  // Group turnos by the 3 specified tabs
-  // 1. EN COLA: Pending attention / in-progress shifts
+  // Group turnos by the 3 specified tabs - strictly only shifts assigned to the current mechanic:
+  // 1. EN COLA: Pending attention / in-progress shifts assigned to this mechanic
   const turnosEnCola = useMemo(() => {
-    return turnos.filter((t) => ["AGENDADO", "EN_ESPERA", "LLAMADO", "REAGENDADO", "EN_ATENCION"].includes(t.estado));
-  }, [turnos]);
+    return turnos.filter(
+      (t) => t.mecanicoAsignadoId === user?.id && ["AGENDADO", "EN_ESPERA", "LLAMADO", "REAGENDADO", "EN_ATENCION"].includes(t.estado)
+    );
+  }, [turnos, user?.id]);
 
-  // 2. DIAGNOSTICADOS: Strictly shifts with estado === "DIAGNOSTICO"
+  // 2. DIAGNOSTICADOS: Strictly shifts with estado === "DIAGNOSTICO" assigned to this mechanic
   const turnosDiagnosticados = useMemo(() => {
-    return turnos.filter((t) => t.estado === "DIAGNOSTICO");
-  }, [turnos]);
+    return turnos.filter(
+      (t) => t.mecanicoAsignadoId === user?.id && t.estado === "DIAGNOSTICO"
+    );
+  }, [turnos, user?.id]);
 
-  // 3. FINALIZADOS: Completed shifts
+  // 3. FINALIZADOS: Completed shifts assigned to this mechanic
   const turnosFinalizados = useMemo(() => {
-    return turnos.filter((t) => t.estado === "FINALIZADO");
-  }, [turnos]);
+    return turnos.filter(
+      (t) => t.mecanicoAsignadoId === user?.id && t.estado === "FINALIZADO"
+    );
+  }, [turnos, user?.id]);
 
   // Filter with real-time Placa (or query)
   const filterList = (list: Turno[]) => {

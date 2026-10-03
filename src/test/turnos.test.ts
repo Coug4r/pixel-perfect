@@ -134,6 +134,35 @@ describe("Lógica de Turnos y Transición de Estados", () => {
     expect(progresoIndex("LISTO")).toBe(4);
     expect(progresoIndex("FINALIZADO")).toBe(5);
   });
+
+  it("permite finalizar un turno directamente desde el estado DIAGNOSTICO", () => {
+    const turno = crearTurno({
+      tipoIdentificacion: "cedula",
+      identificacion: "0340748334",
+      nombre: "Finalizar Test",
+      celular: "0991234567",
+      placa: "XYZ-9999",
+      problema: "Revisión rápida",
+      mecanicoPreferidoId: "m1",
+    });
+
+    turnoActions.tomarTurno(turno.id, "m1");
+    turnoActions.cambiarEstado(turno.id, "m1", "EN_ATENCION");
+    turnoActions.registrarDiagnostico(turno.id, "m1", {
+      diagnostico: "Diagnóstico inicial completo.",
+      observaciones: "Listo para entrega inmediata.",
+      trabajoRealizado: "Ajuste.",
+      recomendaciones: "Ninguna.",
+    });
+
+    let currentTurno = turnoStore.getState().turnos.find((t) => t.id === turno.id);
+    expect(currentTurno?.estado).toBe("DIAGNOSTICO");
+
+    // Botón Finalizar Turno desde DIAGNOSTICO directamente a FINALIZADO
+    turnoActions.cambiarEstado(turno.id, "m1", "FINALIZADO");
+    currentTurno = turnoStore.getState().turnos.find((t) => t.id === turno.id);
+    expect(currentTurno?.estado).toBe("FINALIZADO");
+  });
 });
 
 describe("Autenticación Desacoplada: Mecánicos y Superadmin", () => {
