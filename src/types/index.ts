@@ -38,12 +38,14 @@ export interface Turno {
   id: string;
   numero: number;
   clienteId: string;
+  placa: string;
   problema: string;
   mecanicoPreferidoId: string | null;
   mecanicoAsignadoId: string | null;
   estado: EstadoTurno;
   creadoEn: string;
   horaProgramada: string;
+  updatedAt: string;
   historial: HistorialEstado[];
 }
 
@@ -51,6 +53,7 @@ export interface Diagnostico {
   id: string;
   turnoId: string;
   mecanicoId: string;
+  mecanicoNombre?: string | undefined;
   diagnostico: string;
   observaciones: string;
   trabajoRealizado: string;

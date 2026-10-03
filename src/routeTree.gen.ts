@@ -12,11 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConsultarTurnoRouteImport } from './routes/consultar-turno'
 import { Route as SolicitarTurnoRouteImport } from './routes/solicitar-turno'
+import { Route as AdminCalificacionesRouteImport } from './routes/admin/calificaciones'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as AdminDiagnosticosRouteImport } from './routes/admin/diagnosticos'
+import { Route as AdminHistorialRouteImport } from './routes/admin/historial'
 import { Route as MecanicoColaRouteImport } from './routes/mecanico/cola'
 import { Route as MecanicoDashboardRouteImport } from './routes/mecanico/dashboard'
 import { Route as MecanicoHistorialRouteImport } from './routes/mecanico/historial'
 import { Route as MecanicoLoginRouteImport } from './routes/mecanico/login'
 import { Route as MecanicoNotificacionesRouteImport } from './routes/mecanico/notificaciones'
+import { Route as MecanicoTurnosRouteImport } from './routes/mecanico/turnos'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -31,6 +36,26 @@ const ConsultarTurnoRoute = ConsultarTurnoRouteImport.update({
 const SolicitarTurnoRoute = SolicitarTurnoRouteImport.update({
   id: '/solicitar-turno',
   path: '/solicitar-turno',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCalificacionesRoute = AdminCalificacionesRouteImport.update({
+  id: '/admin/calificaciones',
+  path: '/admin/calificaciones',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDiagnosticosRoute = AdminDiagnosticosRouteImport.update({
+  id: '/admin/diagnosticos',
+  path: '/admin/diagnosticos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminHistorialRoute = AdminHistorialRouteImport.update({
+  id: '/admin/historial',
+  path: '/admin/historial',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MecanicoColaRoute = MecanicoColaRouteImport.update({
@@ -58,37 +83,57 @@ const MecanicoNotificacionesRoute = MecanicoNotificacionesRouteImport.update({
   path: '/mecanico/notificaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MecanicoTurnosRoute = MecanicoTurnosRouteImport.update({
+  id: '/mecanico/turnos',
+  path: '/mecanico/turnos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/consultar-turno': typeof ConsultarTurnoRoute
   '/solicitar-turno': typeof SolicitarTurnoRoute
+  '/admin/calificaciones': typeof AdminCalificacionesRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/diagnosticos': typeof AdminDiagnosticosRoute
+  '/admin/historial': typeof AdminHistorialRoute
   '/mecanico/cola': typeof MecanicoColaRoute
   '/mecanico/dashboard': typeof MecanicoDashboardRoute
   '/mecanico/historial': typeof MecanicoHistorialRoute
   '/mecanico/login': typeof MecanicoLoginRoute
   '/mecanico/notificaciones': typeof MecanicoNotificacionesRoute
+  '/mecanico/turnos': typeof MecanicoTurnosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/consultar-turno': typeof ConsultarTurnoRoute
   '/solicitar-turno': typeof SolicitarTurnoRoute
+  '/admin/calificaciones': typeof AdminCalificacionesRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/diagnosticos': typeof AdminDiagnosticosRoute
+  '/admin/historial': typeof AdminHistorialRoute
   '/mecanico/cola': typeof MecanicoColaRoute
   '/mecanico/dashboard': typeof MecanicoDashboardRoute
   '/mecanico/historial': typeof MecanicoHistorialRoute
   '/mecanico/login': typeof MecanicoLoginRoute
   '/mecanico/notificaciones': typeof MecanicoNotificacionesRoute
+  '/mecanico/turnos': typeof MecanicoTurnosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/consultar-turno': typeof ConsultarTurnoRoute
   '/solicitar-turno': typeof SolicitarTurnoRoute
+  '/admin/calificaciones': typeof AdminCalificacionesRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/diagnosticos': typeof AdminDiagnosticosRoute
+  '/admin/historial': typeof AdminHistorialRoute
   '/mecanico/cola': typeof MecanicoColaRoute
   '/mecanico/dashboard': typeof MecanicoDashboardRoute
   '/mecanico/historial': typeof MecanicoHistorialRoute
   '/mecanico/login': typeof MecanicoLoginRoute
   '/mecanico/notificaciones': typeof MecanicoNotificacionesRoute
+  '/mecanico/turnos': typeof MecanicoTurnosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,42 +141,62 @@ export interface FileRouteTypes {
     | '/'
     | '/consultar-turno'
     | '/solicitar-turno'
+    | '/admin/calificaciones'
+    | '/admin/dashboard'
+    | '/admin/diagnosticos'
+    | '/admin/historial'
     | '/mecanico/cola'
     | '/mecanico/dashboard'
     | '/mecanico/historial'
     | '/mecanico/login'
     | '/mecanico/notificaciones'
+    | '/mecanico/turnos'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/consultar-turno'
     | '/solicitar-turno'
+    | '/admin/calificaciones'
+    | '/admin/dashboard'
+    | '/admin/diagnosticos'
+    | '/admin/historial'
     | '/mecanico/cola'
     | '/mecanico/dashboard'
     | '/mecanico/historial'
     | '/mecanico/login'
     | '/mecanico/notificaciones'
+    | '/mecanico/turnos'
   id:
     | '__root__'
     | '/'
     | '/consultar-turno'
     | '/solicitar-turno'
+    | '/admin/calificaciones'
+    | '/admin/dashboard'
+    | '/admin/diagnosticos'
+    | '/admin/historial'
     | '/mecanico/cola'
     | '/mecanico/dashboard'
     | '/mecanico/historial'
     | '/mecanico/login'
     | '/mecanico/notificaciones'
+    | '/mecanico/turnos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConsultarTurnoRoute: typeof ConsultarTurnoRoute
   SolicitarTurnoRoute: typeof SolicitarTurnoRoute
+  AdminCalificacionesRoute: typeof AdminCalificacionesRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDiagnosticosRoute: typeof AdminDiagnosticosRoute
+  AdminHistorialRoute: typeof AdminHistorialRoute
   MecanicoColaRoute: typeof MecanicoColaRoute
   MecanicoDashboardRoute: typeof MecanicoDashboardRoute
   MecanicoHistorialRoute: typeof MecanicoHistorialRoute
   MecanicoLoginRoute: typeof MecanicoLoginRoute
   MecanicoNotificacionesRoute: typeof MecanicoNotificacionesRoute
+  MecanicoTurnosRoute: typeof MecanicoTurnosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -155,6 +220,34 @@ declare module '@tanstack/react-router' {
       path: '/solicitar-turno'
       fullPath: '/solicitar-turno'
       preLoaderRoute: typeof SolicitarTurnoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/calificaciones': {
+      id: '/admin/calificaciones'
+      path: '/admin/calificaciones'
+      fullPath: '/admin/calificaciones'
+      preLoaderRoute: typeof AdminCalificacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/diagnosticos': {
+      id: '/admin/diagnosticos'
+      path: '/admin/diagnosticos'
+      fullPath: '/admin/diagnosticos'
+      preLoaderRoute: typeof AdminDiagnosticosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/historial': {
+      id: '/admin/historial'
+      path: '/admin/historial'
+      fullPath: '/admin/historial'
+      preLoaderRoute: typeof AdminHistorialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mecanico/cola': {
@@ -192,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MecanicoNotificacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mecanico/turnos': {
+      id: '/mecanico/turnos'
+      path: '/mecanico/turnos'
+      fullPath: '/mecanico/turnos'
+      preLoaderRoute: typeof MecanicoTurnosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -199,11 +299,16 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConsultarTurnoRoute: ConsultarTurnoRoute,
   SolicitarTurnoRoute: SolicitarTurnoRoute,
+  AdminCalificacionesRoute: AdminCalificacionesRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminDiagnosticosRoute: AdminDiagnosticosRoute,
+  AdminHistorialRoute: AdminHistorialRoute,
   MecanicoColaRoute: MecanicoColaRoute,
   MecanicoDashboardRoute: MecanicoDashboardRoute,
   MecanicoHistorialRoute: MecanicoHistorialRoute,
   MecanicoLoginRoute: MecanicoLoginRoute,
   MecanicoNotificacionesRoute: MecanicoNotificacionesRoute,
+  MecanicoTurnosRoute: MecanicoTurnosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -82,17 +82,17 @@ export function Navbar() {
           </div>
 
           {isAuthenticated && user ? (
-            <Link to="/mecanico/dashboard">
+            <Link to={user.rol === "superadmin" ? "/admin/dashboard" : "/mecanico/dashboard"}>
               <Button size="sm" className="gap-1.5 bg-secondary text-secondary-foreground hover:bg-secondary/90">
                 <LayoutDashboard className="h-4 w-4 text-primary" />
-                <span className="hidden sm:inline">Portal:</span> {user.nombre.split(" ")[0]}
+                <span className="hidden sm:inline">{user.rol === "superadmin" ? "Admin" : "Portal"}:</span> {user.nombre.split(" ")[0]}
               </Button>
             </Link>
           ) : (
             <Link to="/mecanico/login">
-              <Button size="sm" variant="outline" className="gap-1.5 border-border hover:bg-muted">
-                <LogIn className="h-4 w-4 text-primary" />
-                <span className="hidden sm:inline">Ingreso de</span> Mecánico
+              <Button size="sm" variant="outline" className="gap-1.5 border-border hover:bg-muted text-xs">
+                <LogIn className="h-3.5 w-3.5 text-primary" />
+                <span>Acceso Personal</span>
               </Button>
             </Link>
           )}

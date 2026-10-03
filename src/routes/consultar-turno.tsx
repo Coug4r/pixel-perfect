@@ -9,6 +9,7 @@ import { DiagnosticoCard } from "@/components/turnos/DiagnosticoCard";
 import { NotificacionesChat } from "@/components/turnos/NotificacionesChat";
 import { CalificacionForm } from "@/components/turnos/CalificacionForm";
 import type { Turno } from "@/types";
+import { formatearPlaca, validarPlaca } from "@/utils/validators";
 import { 
   Search, 
   Clock, 
@@ -19,23 +20,26 @@ import {
   Sparkles, 
   CheckCircle2, 
   AlertCircle, 
-  RefreshCw,
-  HelpCircle,
-  ArrowRight
+  History,
+  FileText,
+  BadgeCheck,
+  Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { formatHora, formatNumero } from "@/utils/format";
+import { formatHora, formatNumero, formatFecha } from "@/utils/format";
 
 export const Route = createFileRoute("/consultar-turno")({
-  validateSearch: (search: Record<string, unknown>): { numero?: string | undefined; id?: string | undefined } => {
+  validateSearch: (search: Record<string, unknown>): { numero?: string | undefined; placa?: string | undefined; id?: string | undefined } => {
     const num = search["numero"];
+    const placa = search["placa"];
     const id = search["id"];
     return {
       numero: typeof num === "string" ? num : undefined,
+      placa: typeof placa === "string" ? placa : undefined,
       id: typeof id === "string" ? id : undefined,
     };
   },
@@ -43,49 +47,50 @@ export const Route = createFileRoute("/consultar-turno")({
 });
 
 function ConsultarTurnoPage() {
-  const { numero: searchNumero, id: searchId } = Route.useSearch();
+  const { numero: searchNumero, placa: searchPlaca, id: searchId } = Route.useSearch();
   const { 
     turnos, 
     clientes, 
     mecanicos, 
-    diagnosticos, 
     notificaciones, 
     calificaciones, 
-    actions 
+    actions,
+    getDiagnosticos
   } = useTurnos();
   const navigate = useNavigate();
 
   const [numeroInput, setNumeroInput] = useState(searchNumero || "");
-  const [identificacionInput, setIdentificacionInput] = useState(searchId || "");
+  const [placaInput, setPlacaInput] = useState(searchPlaca || searchId || "");
   const [turnoEncontrado, setTurnoEncontrado] = useState<Turno | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
   // Auto-search if params are present in URL
   useEffect(() => {
-    if (searchNumero && searchId) {
+    const term = searchPlaca || searchId;
+    if (searchNumero && term) {
       setNumeroInput(searchNumero);
-      setIdentificacionInput(searchId);
-      ejecutarBusqueda(searchNumero, searchId);
+      setPlacaInput(term);
+      ejecutarBusqueda(searchNumero, term);
     }
-  }, [searchNumero, searchId, turnos]);
+  }, [searchNumero, searchPlaca, searchId, turnos]);
 
-  const ejecutarBusqueda = (numStr: string, idStr: string) => {
+  const ejecutarBusqueda = (numStr: string, placaOrId: string) => {
     const num = parseInt(numStr, 10);
-    if (isNaN(num) || !idStr.trim()) {
+    if (isNaN(num) || !placaOrId.trim()) {
       setTurnoEncontrado(null);
       setHasSearched(true);
       return;
     }
 
-    const t = actions.buscarTurno(num, idStr.trim());
+    const t = actions.buscarTurno(num, placaOrId.trim());
     setTurnoEncontrado(t || null);
     setHasSearched(true);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!numeroInput.trim() || !identificacionInput.trim()) {
-      toast.error("Por favor ingresa tanto el número de turno como tu cédula o pasaporte.");
+    if (!numeroInput.trim() || !placaInput.trim()) {
+      toast.error("Por favor ingresa el número de turno y la placa de tu vehículo.");
       return;
     }
 
@@ -93,17 +98,21 @@ function ConsultarTurnoPage() {
       to: "/consultar-turno",
       search: {
         numero: numeroInput.trim(),
-        id: identificacionInput.trim().toUpperCase(),
+        placa: placaInput.trim().toUpperCase(),
       },
     });
 
-    ejecutarBusqueda(numeroInput.trim(), identificacionInput.trim());
+    ejecutarBusqueda(numeroInput.trim(), placaInput.trim());
+  };
+
+  const handlePlacaChange = (val: string) => {
+    setPlacaInput(formatearPlaca(val));
   };
 
   // Matched objects for the found shift
   const cliente = turnoEncontrado ? clientes.find((c) => c.id === turnoEncontrado.clienteId) : undefined;
   const mecanico = turnoEncontrado ? mecanicos.find((m) => m.id === (turnoEncontrado.mecanicoAsignadoId || turnoEncontrado.mecanicoPreferidoId)) : undefined;
-  const diagnostico = turnoEncontrado ? diagnosticos.find((d) => d.turnoId === turnoEncontrado.id) : undefined;
+  const listaDiagnosticos = turnoEncontrado ? getDiagnosticos(turnoEncontrado.id) : [];
   const notifs = turnoEncontrado ? notificaciones.filter((n) => n.turnoId === turnoEncontrado.id) : [];
   const calificacion = turnoEncontrado ? calificaciones.find((c) => c.turnoId === turnoEncontrado.id) : undefined;
 
@@ -111,30 +120,31 @@ function ConsultarTurnoPage() {
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
       <Navbar />
 
-      <main className="flex-1 py-10 sm:py-16">
+      <main className="flex-1 py-8 sm:py-14">
         <div className="container mx-auto max-w-4xl px-4 sm:px-6 space-y-8">
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary shadow-sm">
               <Search className="h-3.5 w-3.5" />
-              <span>Consulta Pública de Estado</span>
+              <span>Consulta de Estado en Tiempo Real</span>
             </div>
             <h1 className="font-display text-3xl sm:text-4xl font-black uppercase tracking-tight text-foreground">
               Consultar Estado de mi Turno
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
-              Ingresa tu número de turno y cédula o pasaporte para ver en qué etapa se encuentra tu vehículo hoy.
+              Ingresa tu número de turno y la placa del vehículo para verificar el avance técnico y saber cuándo retirar tu auto.
             </p>
           </div>
 
           {/* Search Card */}
-          <Card className="border border-border/80 shadow-md bg-card">
+          <Card className="border border-border/80 shadow-lg bg-card">
             <CardContent className="p-5 sm:p-6">
               <form onSubmit={handleSearchSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="num" className="text-xs font-bold uppercase tracking-wider text-foreground">
-                      Número de Turno *
+                    <Label htmlFor="num" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5 text-primary" />
+                      <span>Número de Turno *</span>
                     </Label>
                     <Input
                       id="num"
@@ -144,21 +154,23 @@ function ConsultarTurnoPage() {
                       placeholder="Ej. 1, 2, 24..."
                       value={numeroInput}
                       onChange={(e) => setNumeroInput(e.target.value)}
-                      className="font-mono text-sm"
+                      className="font-mono text-sm h-11"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="id" className="text-xs font-bold uppercase tracking-wider text-foreground">
-                      Cédula o Pasaporte *
+                    <Label htmlFor="placa" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
+                      <Car className="h-3.5 w-3.5 text-primary" />
+                      <span>Placa del Vehículo *</span>
                     </Label>
                     <Input
-                      id="id"
+                      id="placa"
                       required
-                      placeholder="Ej. 1712345678"
-                      value={identificacionInput}
-                      onChange={(e) => setIdentificacionInput(e.target.value)}
-                      className="font-mono text-sm uppercase"
+                      placeholder="Ej. PBX-1024 o ABC1234"
+                      value={placaInput}
+                      onChange={(e) => handlePlacaChange(e.target.value)}
+                      maxLength={8}
+                      className="font-mono text-sm uppercase font-bold tracking-wider h-11"
                     />
                   </div>
                 </div>
@@ -166,45 +178,45 @@ function ConsultarTurnoPage() {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                   {/* Quick test buttons */}
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span className="font-medium">Probar con datos de muestra:</span>
+                    <span className="font-semibold text-foreground/80">Probar con datos mock:</span>
                     <button
                       type="button"
                       onClick={() => {
                         setNumeroInput("1");
-                        setIdentificacionInput("0848259792");
-                        ejecutarBusqueda("1", "0848259792");
+                        setPlacaInput("PBX-1024");
+                        ejecutarBusqueda("1", "PBX-1024");
                       }}
-                      className="rounded bg-muted px-2 py-0.5 font-mono text-foreground hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer"
+                      className="rounded-md bg-muted px-2.5 py-1 font-mono text-foreground font-medium hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer border border-border"
                     >
-                      #001 (Finalizado)
+                      #001 (PBX-1024)
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         setNumeroInput("3");
-                        setIdentificacionInput("2338876234");
-                        ejecutarBusqueda("3", "2338876234");
+                        setPlacaInput("PCD-3382");
+                        ejecutarBusqueda("3", "PCD-3382");
                       }}
-                      className="rounded bg-muted px-2 py-0.5 font-mono text-foreground hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer"
+                      className="rounded-md bg-muted px-2.5 py-1 font-mono text-foreground font-medium hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer border border-border"
                     >
-                      #003 (Listo)
+                      #003 (PCD-3382)
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         setNumeroInput("5");
-                        setIdentificacionInput("2118601299");
-                        ejecutarBusqueda("5", "2118601299");
+                        setPlacaInput("ABC-1234");
+                        ejecutarBusqueda("5", "ABC-1234");
                       }}
-                      className="rounded bg-muted px-2 py-0.5 font-mono text-foreground hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer"
+                      className="rounded-md bg-muted px-2.5 py-1 font-mono text-foreground font-medium hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer border border-border"
                     >
-                      #005 (En atención)
+                      #005 (ABC-1234)
                     </button>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full sm:w-auto gap-2 bg-primary text-primary-foreground font-bold hover:bg-primary/90"
+                    className="w-full sm:w-auto min-h-[44px] px-6 gap-2 bg-primary text-primary-foreground font-bold hover:bg-primary/90 shadow-md"
                   >
                     <Search className="h-4 w-4" />
                     <span>Consultar Turno</span>
@@ -219,6 +231,25 @@ function ConsultarTurnoPage() {
             <div>
               {turnoEncontrado && cliente ? (
                 <div className="space-y-6">
+                  {/* Vehicle Ready Alert Banner if status is LISTO or FINALIZADO */}
+                  {(turnoEncontrado.estado === "LISTO" || turnoEncontrado.estado === "FINALIZADO") && (
+                    <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-emerald-900 dark:text-emerald-200 flex items-start gap-3 shadow-md">
+                      <BadgeCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-sm sm:text-base">
+                          {turnoEncontrado.estado === "LISTO" 
+                            ? "¡Tu vehículo está LISTO para ser retirado!"
+                            : "¡Servicio Finalizado y Entregado!"}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {turnoEncontrado.estado === "LISTO"
+                            ? "El mantenimiento técnico ha concluido. Puedes acercarte a la caja/recepción del taller para retirar las llaves."
+                            : "Agradecemos tu preferencia. Por favor tómate un momento para calificar la atención de nuestro equipo."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Main Shift Status Card */}
                   <Card className="border-2 border-primary/40 shadow-lg bg-card overflow-hidden">
                     {/* Header Banner */}
@@ -230,15 +261,17 @@ function ConsultarTurnoPage() {
                           </span>
                           <EstadoBadge estado={turnoEncontrado.estado} size="default" />
                         </div>
-                        <p className="text-xs text-zinc-300">
-                          Hora programada: <strong className="text-white">{formatHora(turnoEncontrado.horaProgramada)}</strong> • Fecha: Hoy
+                        <p className="text-xs text-zinc-300 flex items-center gap-2">
+                          <span>Hora de solicitud: <strong className="text-white">{formatHora(turnoEncontrado.creadoEn)}</strong></span>
+                          <span>•</span>
+                          <span>Última modif: <strong className="text-white">{formatHora(turnoEncontrado.updatedAt)}</strong></span>
                         </p>
                       </div>
 
                       <div className="text-right">
-                        <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Cliente Registrado</p>
-                        <p className="font-bold text-base text-white">{cliente.nombre}</p>
-                        <p className="text-xs font-mono text-zinc-300">{cliente.identificacion}</p>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Vehículo & Placa</p>
+                        <p className="font-mono text-xl font-black text-primary">{turnoEncontrado.placa}</p>
+                        <p className="text-xs font-semibold text-white">{cliente.nombre}</p>
                       </div>
                     </div>
 
@@ -256,7 +289,7 @@ function ConsultarTurnoPage() {
                       </div>
 
                       {/* Details Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-border">
                         <div className="rounded-lg bg-muted/40 p-3.5 border border-border space-y-1">
                           <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                             <Car className="h-3.5 w-3.5 text-primary" />
@@ -278,13 +311,42 @@ function ConsultarTurnoPage() {
                               : "Asignación automática según disponibilidad"}
                           </p>
                         </div>
+
+                        <div className="rounded-lg bg-muted/40 p-3.5 border border-border space-y-1">
+                          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                            <History className="h-3.5 w-3.5 text-primary" />
+                            <span>Última Actualización</span>
+                          </div>
+                          <p className="text-xs sm:text-sm font-semibold text-foreground">
+                            {formatHora(turnoEncontrado.updatedAt)} ({formatFecha(turnoEncontrado.updatedAt)})
+                          </p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Diagnosis Component (if available) */}
-                  {diagnostico && (
-                    <DiagnosticoCard diagnostico={diagnostico} mecanico={mecanico} />
+                  {/* Multiple Diagnostics Section */}
+                  {listaDiagnosticos.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-primary" />
+                          <span>Diagnósticos Técnicos Registrados ({listaDiagnosticos.length})</span>
+                        </h3>
+                      </div>
+
+                      <div className="space-y-3">
+                        {listaDiagnosticos.map((diag, index) => (
+                          <div key={diag.id} className="relative">
+                            <div className="text-[11px] font-bold uppercase text-primary mb-1 flex items-center gap-1">
+                              <span>Informe #{index + 1}</span>
+                              <span className="text-muted-foreground">• {formatHora(diag.fecha)}</span>
+                            </div>
+                            <DiagnosticoCard diagnostico={diag} mecanico={mecanico} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
 
                   {/* Rating Component (if FINALIZADO) */}
@@ -305,7 +367,7 @@ function ConsultarTurnoPage() {
                       <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
                         <span>Avisos del Taller para este Turno</span>
                       </h3>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground font-medium">
                         {notifs.length} mensaje{notifs.length === 1 ? "" : "s"}
                       </span>
                     </div>
@@ -325,11 +387,11 @@ function ConsultarTurnoPage() {
                     No se encontró ningún turno
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                    Verifica que el número de turno y tu cédula o pasaporte coincidan exactamente con los datos ingresados al solicitar el turno.
+                    Verifica que el número de turno y la placa de tu vehículo coincidan con los datos de registro.
                   </p>
                   <div className="mt-6 flex justify-center gap-3">
                     <Link to="/solicitar-turno">
-                      <Button className="gap-1.5 bg-primary text-primary-foreground text-xs font-bold">
+                      <Button className="gap-1.5 bg-primary text-primary-foreground text-xs font-bold min-h-[42px]">
                         Solicitar Nuevo Turno
                       </Button>
                     </Link>

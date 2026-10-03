@@ -37,13 +37,37 @@ export function normalizarCelular(value: string) {
   return v.startsWith("+593") ? `0${v.slice(4)}` : v;
 }
 
+/** Placa vehicular ecuatoriana: 3 letras + 3 o 4 dígitos (ej. ABC-1234 o ABC1234 o AB-123D motos). */
+export function validarPlaca(value: string): boolean {
+  const clean = value.trim().toUpperCase().replace(/[\s-]/g, "");
+  return /^[A-Z]{3}\d{3,4}$/.test(clean) || /^[A-Z]{2}\d{3,4}[A-Z]?$/.test(clean);
+}
+
+export function formatearPlaca(value: string): string {
+  const clean = value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (clean.length > 3) {
+    return `${clean.slice(0, 3)}-${clean.slice(3, 7)}`;
+  }
+  return clean;
+}
+
 export const solicitudSchema = z
   .object({
     tipoIdentificacion: z.enum(["cedula", "pasaporte"]),
     identificacion: z.string().trim().min(1, "La identificación es obligatoria"),
-    nombre: z.string().trim().min(3, "Ingresa tu nombre completo").max(100, "Máximo 100 caracteres"),
-    celular: z.string().trim().min(1, "El celular es obligatorio").refine(validarCelular, "Formato inválido (ej. 0991234567)"),
-    problema: z.string().trim().min(10, "Describe el problema (mínimo 10 caracteres)").max(500, "Máximo 500 caracteres"),
+    nombre: z
+      .string()
+      .trim()
+      .min(3, "Ingresa tu nombre completo")
+      .max(100, "Máximo 100 caracteres")
+      .refine((v) => !/^\d+$/.test(v), "El nombre no puede contener únicamente números"),
+    celular: z.string().trim().min(1, "El celular es obligatorio").refine(validarCelular, "Formato celular inválido (ej. 0991234567)"),
+    placa: z
+      .string()
+      .trim()
+      .min(1, "La placa es obligatoria")
+      .refine(validarPlaca, "Formato de placa inválido (ej. ABC-1234 o ABC1234)"),
+    problema: z.string().trim().min(5, "Describe el problema o motivo de ingreso").max(500, "Máximo 500 caracteres"),
     mecanicoPreferidoId: z.string().nullable(),
   })
   .superRefine((d, ctx) => {

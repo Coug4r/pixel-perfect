@@ -1,24 +1,22 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { useTurnos } from "@/hooks/useTurnos";
-import { validarIdentificacion, validarCelular } from "@/utils/validators";
+import { validarIdentificacion, validarCelular, validarPlaca, formatearPlaca } from "@/utils/validators";
 import type { TipoIdentificacion, Turno } from "@/types";
 import { 
   PlusCircle, 
   Wrench, 
   User, 
   Phone, 
-  FileText, 
   CheckCircle2, 
   AlertCircle, 
   Clock, 
   Search, 
   Car,
-  ShieldCheck,
-  Sparkles,
-  ArrowRight
+  CreditCard,
+  FileSpreadsheet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +49,7 @@ function SolicitarTurnoPage() {
   const [identificacion, setIdentificacion] = useState("");
   const [nombre, setNombre] = useState("");
   const [celular, setCelular] = useState("");
+  const [placa, setPlaca] = useState("");
   const [problema, setProblema] = useState("");
   const [mecanicoPreferidoId, setMecanicoPreferidoId] = useState<string>(initialMecanico || "none");
 
@@ -63,15 +62,49 @@ function SolicitarTurnoPage() {
     ? validarIdentificacion(tipoIdentificacion, identificacion.trim())
     : null;
 
+  const isNombreValid = nombre.trim().length > 0
+    ? (nombre.trim().length >= 3 && !/^\d+$/.test(nombre.trim()))
+    : null;
+
   const isCelularValid = celular.trim().length > 0
     ? validarCelular(celular.trim())
     : null;
 
+  const isPlacaValid = placa.trim().length > 0
+    ? validarPlaca(placa.trim())
+    : null;
+
+  const isProblemaValid = problema.trim().length > 0
+    ? problema.trim().length >= 5
+    : null;
+
   const isFormValid =
     isIdentificacionValid === true &&
-    nombre.trim().length >= 3 &&
+    isNombreValid === true &&
     isCelularValid === true &&
-    problema.trim().length >= 8;
+    isPlacaValid === true &&
+    isProblemaValid === true;
+
+  const handleIdentificacionChange = (val: string) => {
+    if (tipoIdentificacion === "cedula") {
+      // Numbers only
+      const numeric = val.replace(/\D/g, "");
+      setIdentificacion(numeric);
+    } else {
+      setIdentificacion(val.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+    }
+  };
+
+  const handleCelularChange = (val: string) => {
+    // Only digits and optional leading +
+    const clean = val.replace(/[^0-9+]/g, "");
+    setCelular(clean);
+  };
+
+  const handlePlacaChange = (val: string) => {
+    const formatted = formatearPlaca(val);
+    setPlaca(formatted);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,11 +116,19 @@ function SolicitarTurnoPage() {
       );
       return;
     }
-    if (!isCelularValid) {
-      toast.error("Por favor ingresa un número celular ecuatoriano válido (ej. 0991234567).");
+    if (!isNombreValid) {
+      toast.error("El nombre no puede estar vacío ni contener únicamente números.");
       return;
     }
-    if (problema.trim().length < 8) {
+    if (!isCelularValid) {
+      toast.error("Por favor ingresa un número celular válido (ej. 0991234567).");
+      return;
+    }
+    if (!isPlacaValid) {
+      toast.error("Por favor ingresa una placa vehicular válida (ej. PBX-1024 o ABC1234).");
+      return;
+    }
+    if (!isProblemaValid) {
       toast.error("Por favor describe el problema del vehículo con mayor detalle.");
       return;
     }
@@ -99,6 +140,7 @@ function SolicitarTurnoPage() {
         identificacion: identificacion.trim(),
         nombre: nombre.trim(),
         celular: celular.trim(),
+        placa: placa.trim().toUpperCase(),
         problema: problema.trim(),
         mecanicoPreferidoId: mecanicoPreferidoId === "none" ? null : mecanicoPreferidoId,
       });
@@ -119,10 +161,10 @@ function SolicitarTurnoPage() {
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
       <Navbar />
 
-      <main className="flex-1 py-10 sm:py-16">
+      <main className="flex-1 py-8 sm:py-12">
         <div className="container mx-auto max-w-3xl px-4 sm:px-6">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary mb-3">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary mb-3 shadow-sm">
               <Clock className="h-3.5 w-3.5" />
               <span>Atención para el Día de Hoy</span>
             </div>
@@ -134,14 +176,14 @@ function SolicitarTurnoPage() {
             </p>
           </div>
 
-          <Card className="border border-border/80 shadow-md bg-card">
+          <Card className="border border-border/80 shadow-lg bg-card">
             <CardHeader className="border-b border-border/60 py-4 px-6 bg-muted/20">
               <CardTitle className="font-display text-lg font-bold text-foreground flex items-center gap-2">
                 <PlusCircle className="h-5 w-5 text-primary" />
                 <span>Datos del Cliente y Vehículo</span>
               </CardTitle>
               <CardDescription className="text-xs">
-                Todos los campos marcados con (*) son obligatorios.
+                Todos los campos marcados con (*) son obligatorios para la recepción.
               </CardDescription>
             </CardHeader>
 
@@ -158,15 +200,15 @@ function SolicitarTurnoPage() {
                       setTipoIdentificacion(val as TipoIdentificacion);
                       setIdentificacion("");
                     }}
-                    className="grid grid-cols-2 gap-3"
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                   >
-                    <div className="flex items-center space-x-2 rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center space-x-3 rounded-lg border border-border p-3.5 hover:bg-muted/40 transition-colors min-h-[48px] cursor-pointer">
                       <RadioGroupItem value="cedula" id="cedula" />
                       <Label htmlFor="cedula" className="text-xs font-semibold cursor-pointer">
                         Cédula Ecuatoriana (10 dígitos)
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2 rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center space-x-3 rounded-lg border border-border p-3.5 hover:bg-muted/40 transition-colors min-h-[48px] cursor-pointer">
                       <RadioGroupItem value="pasaporte" id="pasaporte" />
                       <Label htmlFor="pasaporte" className="text-xs font-semibold cursor-pointer">
                         Pasaporte Extranjero
@@ -175,26 +217,27 @@ function SolicitarTurnoPage() {
                   </RadioGroup>
 
                   <div className="space-y-1.5 pt-1">
-                    <Label htmlFor="identificacion" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Número de {tipoIdentificacion === "cedula" ? "Cédula" : "Pasaporte"} *
+                    <Label htmlFor="identificacion" className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                      <CreditCard className="h-3.5 w-3.5 text-primary" />
+                      <span>Número de {tipoIdentificacion === "cedula" ? "Cédula" : "Pasaporte"} *</span>
                     </Label>
                     <div className="relative">
                       <Input
                         id="identificacion"
                         required
                         value={identificacion}
-                        onChange={(e) => setIdentificacion(e.target.value)}
+                        onChange={(e) => handleIdentificacionChange(e.target.value)}
                         placeholder={tipoIdentificacion === "cedula" ? "Ej. 1712345678" : "Ej. A1234567"}
                         maxLength={tipoIdentificacion === "cedula" ? 10 : 12}
-                        className={`pr-9 font-mono text-sm ${
+                        className={`pr-10 font-mono text-sm h-11 ${
                           isIdentificacionValid === true
-                            ? "border-emerald-500 focus-visible:ring-emerald-500"
+                            ? "border-emerald-500 focus-visible:ring-emerald-500 bg-emerald-500/5"
                             : isIdentificacionValid === false
-                            ? "border-destructive focus-visible:ring-destructive"
+                            ? "border-destructive focus-visible:ring-destructive bg-destructive/5"
                             : ""
                         }`}
                       />
-                      <div className="absolute right-3 top-2.5 pointer-events-none">
+                      <div className="absolute right-3 top-3 pointer-events-none">
                         {isIdentificacionValid === true && (
                           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                         )}
@@ -204,32 +247,48 @@ function SolicitarTurnoPage() {
                       </div>
                     </div>
                     {isIdentificacionValid === false && (
-                      <p className="text-[11px] text-destructive font-medium">
+                      <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
                         {tipoIdentificacion === "cedula"
-                          ? "Número de cédula ecuatoriana no válido."
-                          : "Pasaporte no válido (debe tener entre 6 y 9 caracteres)."}
+                          ? "Cédula ecuatoriana inválida (debe contener 10 dígitos y código de provincia válido)."
+                          : "Pasaporte inválido (debe tener entre 6 y 9 caracteres alfanuméricos)."}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* 2. Nombre y Celular Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="nombre" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
-                      <User className="h-3.5 w-3.5 text-primary" />
-                      <span>Nombre Completo *</span>
-                    </Label>
+                {/* 2. Nombre Completo */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="nombre" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
+                    <User className="h-3.5 w-3.5 text-primary" />
+                    <span>Nombre Completo del Cliente *</span>
+                  </Label>
+                  <div className="relative">
                     <Input
                       id="nombre"
                       required
                       value={nombre}
                       onChange={(e) => setNombre(e.target.value)}
                       placeholder="Ej. Juan Carlos Pérez"
-                      className="text-sm"
+                      className={`text-sm h-11 ${
+                        isNombreValid === true
+                          ? "border-emerald-500 focus-visible:ring-emerald-500"
+                          : isNombreValid === false
+                          ? "border-destructive focus-visible:ring-destructive bg-destructive/5"
+                          : ""
+                      }`}
                     />
                   </div>
+                  {isNombreValid === false && (
+                    <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      El nombre debe tener al menos 3 caracteres y no puede contener solo números.
+                    </p>
+                  )}
+                </div>
 
+                {/* 3. Celular y PLACA Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="celular" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
                       <Phone className="h-3.5 w-3.5 text-primary" />
@@ -240,18 +299,18 @@ function SolicitarTurnoPage() {
                         id="celular"
                         required
                         value={celular}
-                        onChange={(e) => setCelular(e.target.value)}
+                        onChange={(e) => handleCelularChange(e.target.value)}
                         placeholder="Ej. 0991234567"
                         maxLength={13}
-                        className={`pr-9 font-mono text-sm ${
+                        className={`pr-10 font-mono text-sm h-11 ${
                           isCelularValid === true
-                            ? "border-emerald-500 focus-visible:ring-emerald-500"
+                            ? "border-emerald-500 focus-visible:ring-emerald-500 bg-emerald-500/5"
                             : isCelularValid === false
-                            ? "border-destructive focus-visible:ring-destructive"
+                            ? "border-destructive focus-visible:ring-destructive bg-destructive/5"
                             : ""
                         }`}
                       />
-                      <div className="absolute right-3 top-2.5 pointer-events-none">
+                      <div className="absolute right-3 top-3 pointer-events-none">
                         {isCelularValid === true && (
                           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                         )}
@@ -261,17 +320,56 @@ function SolicitarTurnoPage() {
                       </div>
                     </div>
                     {isCelularValid === false && (
-                      <p className="text-[11px] text-destructive font-medium">
-                        Ingresa un formato celular válido (ej. 0991234567 o +593991234567).
+                      <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Ingresa un celular ecuatoriano válido (ej. 0991234567 o +593991234567).
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="placa" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
+                      <Car className="h-3.5 w-3.5 text-primary" />
+                      <span>Placa del Vehículo *</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="placa"
+                        required
+                        value={placa}
+                        onChange={(e) => handlePlacaChange(e.target.value)}
+                        placeholder="Ej. PBX-1024 o ABC1234"
+                        maxLength={8}
+                        className={`pr-10 font-mono uppercase font-bold text-sm tracking-wider h-11 ${
+                          isPlacaValid === true
+                            ? "border-emerald-500 focus-visible:ring-emerald-500 bg-emerald-500/5"
+                            : isPlacaValid === false
+                            ? "border-destructive focus-visible:ring-destructive bg-destructive/5"
+                            : ""
+                        }`}
+                      />
+                      <div className="absolute right-3 top-3 pointer-events-none">
+                        {isPlacaValid === true && (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        )}
+                        {isPlacaValid === false && (
+                          <AlertCircle className="h-4 w-4 text-destructive" />
+                        )}
+                      </div>
+                    </div>
+                    {isPlacaValid === false && (
+                      <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Formato de placa inválido (3 letras seguidas de 3 o 4 números, ej. PBX-1024).
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* 3. Problema del vehículo */}
+                {/* 4. Problema del vehículo */}
                 <div className="space-y-1.5">
                   <Label htmlFor="problema" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
-                    <Car className="h-3.5 w-3.5 text-primary" />
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
                     <span>Detalle del Problema / Falla del Vehículo *</span>
                   </Label>
                   <Textarea
@@ -279,29 +377,40 @@ function SolicitarTurnoPage() {
                     required
                     value={problema}
                     onChange={(e) => setProblema(e.target.value)}
-                    placeholder="Describe qué le sucede al vehículo: ruidos al frenar, luz de check engine, fuga de fluidos, mantenimiento periódico, etc."
+                    placeholder="Describe qué le sucede al vehículo: ruidos al frenar, luz de check engine, fuga de fluidos, mantenimiento de frenos, etc."
                     rows={3}
-                    className="text-sm resize-none"
+                    className={`text-sm resize-none ${
+                      isProblemaValid === false
+                        ? "border-destructive focus-visible:ring-destructive bg-destructive/5"
+                        : ""
+                    }`}
                   />
-                  <p className="text-[11px] text-muted-foreground">
-                    Sé lo más específico posible para que el técnico prepare la herramienta adecuada.
-                  </p>
+                  {isProblemaValid === false ? (
+                    <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Por favor especifica el motivo o problema a atender (mínimo 5 caracteres).
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Sé lo más específico posible para que el técnico prepare la herramienta adecuada.
+                    </p>
+                  )}
                 </div>
 
-                {/* 4. Mecánico de Preferencia */}
+                {/* 5. Mecánico de Preferencia */}
                 <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="mecanico" className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                       <Wrench className="h-4 w-4 text-primary" />
                       <span>Mecánico de Preferencia (Opcional)</span>
                     </Label>
-                    <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">
                       Mismo orden de llegada
                     </span>
                   </div>
 
                   <Select value={mecanicoPreferidoId} onValueChange={setMecanicoPreferidoId}>
-                    <SelectTrigger id="mecanico" className="w-full bg-background">
+                    <SelectTrigger id="mecanico" className="w-full bg-background h-11 text-sm">
                       <SelectValue placeholder="Seleccionar mecánico..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -327,7 +436,7 @@ function SolicitarTurnoPage() {
                 <Button
                   type="submit"
                   disabled={!isFormValid || isSubmitting}
-                  className="w-full h-12 text-base font-black uppercase tracking-wide gap-2 bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+                  className="w-full min-h-[50px] text-base font-black uppercase tracking-wide gap-2 bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <PlusCircle className="h-5 w-5" />
                   <span>{isSubmitting ? "Registrando Turno..." : "Confirmar y Solicitar Turno"}</span>
@@ -355,11 +464,19 @@ function SolicitarTurnoPage() {
             </DialogHeader>
 
             <div className="space-y-3 py-3 border-y border-border">
-              <div className="flex justify-between items-center bg-muted/40 p-3 rounded-lg border border-border">
-                <span className="text-xs text-muted-foreground font-medium">Número de Turno:</span>
-                <span className="font-display text-2xl font-black text-primary">
-                  #{formatNumero(turnoCreado.numero)}
-                </span>
+              <div className="flex justify-between items-center bg-muted/40 p-3.5 rounded-lg border border-border">
+                <div>
+                  <span className="text-xs text-muted-foreground font-medium block">Número de Turno:</span>
+                  <span className="font-display text-2xl font-black text-primary">
+                    #{formatNumero(turnoCreado.numero)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-muted-foreground font-medium block">Placa:</span>
+                  <span className="font-mono text-base font-bold bg-muted px-2.5 py-1 rounded border border-border">
+                    {turnoCreado.placa}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -396,7 +513,7 @@ function SolicitarTurnoPage() {
                   setShowConfirmModal(false);
                   navigate({ to: "/" });
                 }}
-                className="w-full sm:w-auto text-xs"
+                className="w-full sm:w-auto text-xs min-h-[42px]"
               >
                 Volver al Inicio
               </Button>
@@ -408,11 +525,11 @@ function SolicitarTurnoPage() {
                     to: "/consultar-turno",
                     search: {
                       numero: String(turnoCreado.numero),
-                      id: identificacion.trim(),
+                      placa: turnoCreado.placa,
                     },
                   });
                 }}
-                className="w-full sm:w-auto gap-1.5 bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs"
+                className="w-full sm:w-auto gap-1.5 bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs min-h-[42px]"
               >
                 <Search className="h-4 w-4" />
                 <span>Consultar mi Turno</span>

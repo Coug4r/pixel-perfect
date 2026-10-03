@@ -1,4 +1,4 @@
-export type Rol = "mecanico";
+export type Rol = "mecanico" | "superadmin";
 
 export interface AuthUser {
   id: string;

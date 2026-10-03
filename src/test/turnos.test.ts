@@ -40,15 +40,17 @@ describe("Lógica de Turnos y Transición de Estados", () => {
       identificacion: "0848259792",
       nombre: "Test Usuario",
       celular: "0991234567",
+      placa: "PBX-1024",
       problema: "Frenos desgastados y vibración",
       mecanicoPreferidoId: null,
     });
 
     expect(turno.numero).toBeGreaterThan(0);
     expect(turno.estado).toBe("AGENDADO");
+    expect(turno.placa).toBe("PBX-1024");
     expect(turno.mecanicoAsignadoId).toBeNull();
 
-    const buscado = buscarTurno(turno.numero, "0848259792");
+    const buscado = buscarTurno(turno.numero, "PBX-1024");
     expect(buscado).toBeDefined();
     expect(buscado?.id).toBe(turno.id);
   });
@@ -59,6 +61,7 @@ describe("Lógica de Turnos y Transición de Estados", () => {
       identificacion: "0340748334",
       nombre: "Carlos Test",
       celular: "0991234567",
+      placa: "ABC-1234",
       problema: "Revisión general de motor",
       mecanicoPreferidoId: "m1",
     });
@@ -75,7 +78,7 @@ describe("Lógica de Turnos y Transición de Estados", () => {
     currentTurno = state.turnos.find((t) => t.id === turno.id);
     expect(currentTurno?.estado).toBe("EN_ATENCION");
 
-    // Registrar Diagnóstico
+    // Registrar Diagnóstico 1
     turnoActions.registrarDiagnostico(turno.id, "m1", {
       diagnostico: "Desgaste de zapatas traseras.",
       observaciones: "Requiere rectificación.",
@@ -86,8 +89,21 @@ describe("Lógica de Turnos y Transición de Estados", () => {
     state = turnoStore.getState();
     currentTurno = state.turnos.find((t) => t.id === turno.id);
     expect(currentTurno?.estado).toBe("DIAGNOSTICO");
-    const diag = state.diagnosticos.find((d) => d.turnoId === turno.id);
-    expect(diag?.diagnostico).toBe("Desgaste de zapatas traseras.");
+    let diags = state.diagnosticos.filter((d) => d.turnoId === turno.id);
+    expect(diags.length).toBe(1);
+    expect(diags[0]?.diagnostico).toBe("Desgaste de zapatas traseras.");
+
+    // Registrar Diagnóstico 2 (Múltiples diagnósticos conservados)
+    turnoActions.registrarDiagnostico(turno.id, "m1", {
+      diagnostico: "Fuga leve en bombín de freno.",
+      observaciones: "Se procede con purgado y cambio de retén.",
+      trabajoRealizado: "Reemplazo de retén.",
+      recomendaciones: "Probar frenos en 500 km.",
+    });
+
+    state = turnoStore.getState();
+    diags = state.diagnosticos.filter((d) => d.turnoId === turno.id);
+    expect(diags.length).toBe(2);
 
     // Pasar a LISTO
     turnoActions.cambiarEstado(turno.id, "m1", "LISTO");
@@ -120,13 +136,22 @@ describe("Lógica de Turnos y Transición de Estados", () => {
   });
 });
 
-describe("Autenticación Desacoplada de Mecánicos", () => {
-  it("autentica correctamente con credenciales válidas y rechaza inválidas", async () => {
+describe("Autenticación Desacoplada: Mecánicos y Superadmin", () => {
+  it("autentica correctamente a un mecánico", async () => {
     const session = await authService.login("1100000001", "123456");
     expect(session.user.rol).toBe("mecanico");
     expect(session.user.cedula).toBe("1100000001");
     expect(session.token).toBeDefined();
+  });
 
-    await expect(authService.login("1100000001", "wrongpassword")).rejects.toThrow();
+  it("autentica correctamente al Superadmin", async () => {
+    const session = await authService.login("1100000000", "admin123");
+    expect(session.user.rol).toBe("superadmin");
+    expect(session.user.cedula).toBe("1100000000");
+    expect(session.token).toBeDefined();
+  });
+
+  it("rechaza contraseñas inválidas", async () => {
+    await expect(authService.login("1100000000", "wrongpass")).rejects.toThrow();
   });
 });

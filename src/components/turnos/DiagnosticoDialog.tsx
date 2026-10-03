@@ -82,11 +82,11 @@ export function DiagnosticoDialog({
             <div className="flex items-center gap-2 text-primary">
               <Stethoscope className="h-5 w-5" />
               <DialogTitle className="font-display text-xl">
-                Registrar Diagnóstico — Turno #{turno ? formatNumero(turno.numero) : ""}
+                + Agregar Diagnóstico Técnico — Turno #{turno ? formatNumero(turno.numero) : ""}
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs">
-              Detalla la inspección técnica realizada al vehículo del cliente. Esta información será visible en la consulta de su turno.
+              Registra un nuevo informe de inspección técnica para el vehículo (Placa: {turno?.placa || "S/P"}). Todos los diagnósticos quedan almacenados en el historial del turno.
             </DialogDescription>
           </DialogHeader>
 
