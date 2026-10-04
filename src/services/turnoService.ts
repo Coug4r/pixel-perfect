@@ -4,8 +4,9 @@ import { buildNotificacion } from "./notificationService";
 import { ESTADO_META } from "@/utils/estados";
 import { formatHora, formatNumero, horaHoyIso } from "@/utils/format";
 import { MECANICOS } from "@/data/mecanicos";
+import { api, mapBackendTurno } from "./api";
 
-/** Reglas de negocio de turnos. Cada función podría delegarse a una API real. */
+/** Reglas de negocio de turnos conectadas a PostgreSQL */
 export class TurnoError extends Error {}
 
 const uid = (p: string) => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -42,12 +43,14 @@ function getTurno(state: TallerState, id: string) {
 
 function assertTransicion(t: Turno, estado: EstadoTurno) {
   if (!TRANSICIONES[t.estado]?.includes(estado)) {
-    throw new TurnoError(`No se puede pasar de "${ESTADO_META[t.estado].label}" a "${ESTADO_META[estado].label}".`);
+    throw new TurnoError(`No se puede pasar de "${ESTADO_META[t.estado]?.label || t.estado}" a "${ESTADO_META[estado]?.label || estado}".`);
   }
 }
 
 function assertPropietario(t: Turno, mecanicoId: string) {
-  if (t.mecanicoAsignadoId !== mecanicoId) throw new TurnoError("Este turno está asignado a otro mecánico.");
+  if (t.mecanicoAsignadoId && t.mecanicoAsignadoId !== mecanicoId) {
+    throw new TurnoError("Este turno está asignado a otro mecánico.");
+  }
 }
 
 function aplicarEstado(state: TallerState, turnoId: string, estado: EstadoTurno, patch: Partial<Turno> = {}, nota?: string): TallerState {
@@ -63,11 +66,13 @@ function aplicarEstado(state: TallerState, turnoId: string, estado: EstadoTurno,
       { estado, fecha: now, ...(nota !== undefined ? { nota } : {}) },
     ],
   };
-  const cliente = state.clientes.find((c) => c.id === turno.clienteId)!;
+  const cliente = state.clientes.find((c) => c.id === turno.clienteId);
   return {
     ...state,
     turnos: state.turnos.map((t) => (t.id === turnoId ? updated : t)),
-    notificaciones: [...state.notificaciones, buildNotificacion(updated, cliente, estado)],
+    notificaciones: cliente
+      ? [...state.notificaciones, buildNotificacion(updated, cliente, estado)]
+      : state.notificaciones,
   };
 }
 
@@ -81,17 +86,51 @@ export interface CrearTurnoInput {
   mecanicoPreferidoId: string | null;
 }
 
-export function crearTurno(input: CrearTurnoInput): Turno {
-  let creado!: Turno;
-  const s = turnoStore.getState();
+export async function crearTurno(input: CrearTurnoInput): Promise<Turno> {
   const ident = input.identificacion.toUpperCase();
   const placaNorm = input.placa.trim().toUpperCase();
+
+  // Si estamos en el navegador, persistir en PostgreSQL
+  if (typeof window !== "undefined") {
+    try {
+      const res = await api.turnos.crear({
+        tipoIdentificacion: input.tipoIdentificacion.toUpperCase() as "CEDULA" | "PASAPORTE",
+        identificacion: ident,
+        nombre: input.nombre.trim(),
+        celular: input.celular.trim(),
+        placa: placaNorm,
+        motivo: input.problema.trim(),
+        mecanicoPreferidoId:
+          input.mecanicoPreferidoId &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.mecanicoPreferidoId)
+            ? input.mecanicoPreferidoId
+            : null,
+      });
+
+      const creado = mapBackendTurno(res);
+      turnoStore.setState(
+        (st) => ({
+          ...st,
+          turnos: [creado, ...st.turnos.filter((t) => t.id !== creado.id)],
+        }),
+        { type: "created", turnoId: creado.id }
+      );
+      await turnoStore.syncWithBackend();
+      return creado;
+    } catch (err: any) {
+      console.error("[crearTurno] Error guardando en backend:", err);
+      throw new TurnoError(err.message || "Error al registrar el turno en base de datos.");
+    }
+  }
+
+  // Fallback para pruebas unitarias / entorno SSR sin backend
+  const s = turnoStore.getState();
   const existente = s.clientes.find((c) => c.identificacion.toUpperCase() === ident);
   const cliente = existente
     ? { ...existente, nombre: input.nombre, celular: input.celular }
     : { id: uid("c"), tipoIdentificacion: input.tipoIdentificacion, identificacion: ident, nombre: input.nombre, celular: input.celular };
   const now = new Date().toISOString();
-  creado = {
+  const creado: Turno = {
     id: uid("t"),
     numero: Math.max(0, ...s.turnos.map((t) => t.numero)) + 1,
     clienteId: cliente.id,
@@ -117,7 +156,18 @@ export function crearTurno(input: CrearTurnoInput): Turno {
   return creado;
 }
 
-export function tomarTurno(turnoId: string, mecanicoId: string) {
+export async function tomarTurno(turnoId: string, mecanicoId: string): Promise<void> {
+  if (typeof window !== "undefined") {
+    try {
+      await api.turnos.tomar(turnoId);
+      await turnoStore.syncWithBackend();
+      return;
+    } catch (err: any) {
+      console.error("[tomarTurno] Error en backend:", err);
+      throw new TurnoError(err.message || "Error al tomar el turno en base de datos.");
+    }
+  }
+
   const s = turnoStore.getState();
   const t = getTurno(s, turnoId);
   if (t.mecanicoAsignadoId && t.mecanicoAsignadoId !== mecanicoId) throw new TurnoError("Este turno pertenece a otro mecánico.");
@@ -133,7 +183,28 @@ export function tomarTurno(turnoId: string, mecanicoId: string) {
   });
 }
 
-export function cambiarEstado(turnoId: string, mecanicoId: string, estado: EstadoTurno) {
+export async function cambiarEstado(turnoId: string, mecanicoId: string, estado: EstadoTurno): Promise<void> {
+  if (typeof window !== "undefined") {
+    try {
+      if (estado === "LLAMADO") {
+        await api.turnos.llamar(turnoId);
+      } else if (estado === "LISTO") {
+        await api.turnos.marcarListo(turnoId);
+      } else if (estado === "FINALIZADO") {
+        await api.turnos.finalizar(turnoId);
+      } else if (estado === "NO_ASISTIO") {
+        await api.turnos.noAsistio(turnoId);
+      } else if (estado === "EN_ATENCION") {
+        // En backend tomarTurno inicia la atención
+      }
+      await turnoStore.syncWithBackend();
+      return;
+    } catch (err: any) {
+      console.error("[cambiarEstado] Error en backend:", err);
+      throw new TurnoError(err.message || "Error al cambiar estado en base de datos.");
+    }
+  }
+
   const t = getTurno(turnoStore.getState(), turnoId);
   assertPropietario(t, mecanicoId);
   assertTransicion(t, estado);
@@ -142,13 +213,29 @@ export function cambiarEstado(turnoId: string, mecanicoId: string, estado: Estad
 
 export type DiagnosticoInput = Pick<Diagnostico, "diagnostico" | "observaciones" | "trabajoRealizado" | "recomendaciones">;
 
-/** Múltiples diagnósticos: guarda cada nuevo diagnóstico sin sobrescribir los anteriores */
-export function registrarDiagnostico(turnoId: string, mecanicoId: string, data: DiagnosticoInput) {
+/** Múltiples diagnósticos: guarda cada nuevo diagnóstico en PostgreSQL sin sobrescribir los anteriores */
+export async function registrarDiagnostico(turnoId: string, mecanicoId: string, data: DiagnosticoInput): Promise<void> {
+  if (typeof window !== "undefined") {
+    try {
+      await api.turnos.agregarDiagnostico(turnoId, {
+        descripcion: data.diagnostico,
+        observaciones: data.observaciones,
+        trabajoRealizado: data.trabajoRealizado,
+        recomendaciones: data.recomendaciones,
+      });
+      await turnoStore.syncWithBackend();
+      return;
+    } catch (err: any) {
+      console.error("[registrarDiagnostico] Error en backend:", err);
+      throw new TurnoError(err.message || "Error al registrar diagnóstico en base de datos.");
+    }
+  }
+
   const s = turnoStore.getState();
   const t = getTurno(s, turnoId);
   assertPropietario(t, mecanicoId);
   const now = new Date().toISOString();
-  const mec = MECANICOS.find((m) => m.id === mecanicoId);
+  const mec = (s.mecanicos || MECANICOS).find((m) => m.id === mecanicoId);
   const diag: Diagnostico = {
     id: uid("d"),
     turnoId,
@@ -164,14 +251,24 @@ export function registrarDiagnostico(turnoId: string, mecanicoId: string, data: 
         ...st,
         diagnosticos: [...st.diagnosticos, diag],
       };
-      // Si está en atención o en diagnóstico, actualiza el estado y updatedAt
       return aplicarEstado(conDiag, turnoId, "DIAGNOSTICO");
     },
     { type: "updated", turnoId, estado: "DIAGNOSTICO" },
   );
 }
 
-export function reagendar(turnoId: string, mecanicoId: string, hhmm: string) {
+export async function reagendar(turnoId: string, mecanicoId: string, hhmm: string): Promise<void> {
+  if (typeof window !== "undefined") {
+    try {
+      await api.turnos.reagendar(turnoId, `Reagendado para las ${hhmm}`);
+      await turnoStore.syncWithBackend();
+      return;
+    } catch (err: any) {
+      console.error("[reagendar] Error en backend:", err);
+      throw new TurnoError(err.message || "Error al reagendar en base de datos.");
+    }
+  }
+
   const t = getTurno(turnoStore.getState(), turnoId);
   assertPropietario(t, mecanicoId);
   assertTransicion(t, "REAGENDADO");
@@ -195,9 +292,26 @@ export function buscarTurno(numero: number, placaOrId: string): Turno | undefine
   });
 }
 
-export function calificar(turnoId: string, estrellas: number, comentario: string) {
+export async function calificar(turnoId: string, estrellas: number, comentario: string): Promise<void> {
   const s = turnoStore.getState();
   const t = getTurno(s, turnoId);
+
+  if (typeof window !== "undefined") {
+    try {
+      await api.turnos.calificar(turnoId, {
+        numeroTurno: t.numero,
+        placa: t.placa,
+        estrellas,
+        comentario,
+      });
+      await turnoStore.syncWithBackend();
+      return;
+    } catch (err: any) {
+      console.error("[calificar] Error en backend:", err);
+      throw new TurnoError(err.message || "Error al registrar calificación en base de datos.");
+    }
+  }
+
   if (t.estado !== "FINALIZADO" || !t.mecanicoAsignadoId) throw new TurnoError("Solo puedes calificar turnos finalizados.");
   if (s.calificaciones.some((c) => c.turnoId === turnoId)) throw new TurnoError("Este turno ya fue calificado.");
   if (estrellas < 1 || estrellas > 5) throw new TurnoError("Selecciona de 1 a 5 estrellas.");
@@ -232,4 +346,3 @@ export const turnoActions = {
   calificar,
   marcarNotificacionesLeidas,
 };
-

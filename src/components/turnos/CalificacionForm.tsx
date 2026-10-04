@@ -12,7 +12,7 @@ interface CalificacionFormProps {
   turnoId: string;
   mecanico?: Mecanico | undefined;
   calificacionExistente?: Calificacion | undefined;
-  onSubmit: (estrellas: number, comentario: string) => void;
+  onSubmit: (estrellas: number, comentario: string) => Promise<void> | void;
   className?: string | undefined;
 }
 
@@ -35,7 +35,7 @@ export function CalificacionForm({
   const [comentario, setComentario] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (estrellas < 1 || estrellas > 5) {
       toast.error("Por favor selecciona una calificación de 1 a 5 estrellas.");
@@ -43,7 +43,7 @@ export function CalificacionForm({
     }
     setIsSubmitting(true);
     try {
-      onSubmit(estrellas, comentario);
+      await onSubmit(estrellas, comentario);
       toast.success("¡Gracias por calificar la atención!");
     } catch (err: any) {
       toast.error(err.message || "Error al registrar la calificación.");

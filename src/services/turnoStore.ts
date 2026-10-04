@@ -1,12 +1,25 @@
-import type { EstadoTurno, TallerState } from "@/types";
+import type {
+  EstadoTurno,
+  TallerState,
+  Turno,
+  Cliente,
+  Diagnostico,
+  Calificacion,
+  Notificacion,
+} from "@/types";
 import { createSeedState } from "@/data";
 import { todayKey } from "@/utils/format";
+import { io, Socket } from "socket.io-client";
+import {
+  api,
+  mapBackendTurno,
+  mapBackendCliente,
+  mapBackendMecanico,
+  mapBackendDiagnostico,
+  mapBackendCalificacion,
+  mapBackendNotificacion,
+} from "./api";
 
-/**
- * Almacén local de turnos. Simula el "tiempo real" con suscriptores en memoria
- * y sincronización entre pestañas vía localStorage. Para producción se puede
- * sustituir por un cliente WebSocket que llame a setState/emit.
- */
 export type TurnoEvent =
   | { type: "created"; turnoId: string }
   | { type: "updated"; turnoId: string; estado: EstadoTurno }
@@ -16,6 +29,8 @@ const KEY = "taller.state.v1";
 const serverState = createSeedState();
 let state: TallerState = serverState;
 let hydrated = false;
+let socket: Socket | null = null;
+let syncPromise: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 const eventListeners = new Set<(e: TurnoEvent) => void>();
 
@@ -32,9 +47,129 @@ function persist() {
   }
 }
 
+/**
+ * Consulta la base de datos PostgreSQL a través de la API REST del backend
+ * y sincroniza el estado local en memoria y en localStorage.
+ */
+async function syncWithBackend(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (syncPromise) {
+    return syncPromise;
+  }
+
+  syncPromise = (async () => {
+    try {
+      const [turnosRaw, mecanicosRaw] = await Promise.all([
+        api.turnos.listar(),
+        api.turnos.mecanicos(),
+      ]);
+
+    const turnosMapped = (turnosRaw || []).map(mapBackendTurno);
+    const mecanicosMapped = (mecanicosRaw || []).map(mapBackendMecanico);
+
+    // Clientes únicos asociados a los turnos
+    const clientesMap = new Map<string, Cliente>();
+    for (const tr of turnosRaw || []) {
+      if (tr.cliente) {
+        clientesMap.set(tr.cliente.id, mapBackendCliente(tr.cliente));
+      }
+    }
+    const clientesMapped = Array.from(clientesMap.values());
+
+    // Extraer diagnósticos
+    const diagnosticosMapped: Diagnostico[] = [];
+    for (const tr of turnosRaw || []) {
+      if (Array.isArray(tr.diagnosticos)) {
+        for (const d of tr.diagnosticos) {
+          diagnosticosMapped.push(mapBackendDiagnostico(d));
+        }
+      }
+    }
+
+    // Extraer calificaciones
+    const calificacionesMapped: Calificacion[] = [];
+    for (const tr of turnosRaw || []) {
+      if (tr.calificacion) {
+        calificacionesMapped.push(mapBackendCalificacion(tr.calificacion));
+      }
+    }
+
+    // Extraer notificaciones
+    const notificacionesMapped: Notificacion[] = [];
+    for (const tr of turnosRaw || []) {
+      if (Array.isArray(tr.notificaciones)) {
+        for (const n of tr.notificaciones) {
+          notificacionesMapped.push(mapBackendNotificacion(n));
+        }
+      }
+    }
+
+    state = {
+      fecha: todayKey(),
+      turnos: turnosMapped,
+      mecanicos: mecanicosMapped,
+      clientes: clientesMapped,
+      diagnosticos: diagnosticosMapped,
+      calificaciones: calificacionesMapped,
+      notificaciones: notificacionesMapped,
+    };
+
+    persist();
+    notify([{ type: "sync" }]);
+    } catch (err) {
+      console.warn("[turnoStore] No se pudo sincronizar con PostgreSQL:", err);
+    } finally {
+      syncPromise = null;
+    }
+  })();
+
+  return syncPromise;
+}
+
+/**
+ * Conexión Socket.IO con el servidor Node.js/Express
+ */
+function initSocket() {
+  if (typeof window === "undefined" || socket) return;
+  try {
+    const socketUrl = "http://localhost:3000";
+    socket = io(socketUrl, {
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 20,
+      reconnectionDelay: 2000,
+    });
+
+    socket.on("connect", () => {
+      // Sincronizar inmediatamente al conectar
+      syncWithBackend();
+    });
+
+    const backendEvents = [
+      "turno:creado",
+      "turno:actualizado",
+      "turno:asignado",
+      "turno:atencion",
+      "turno:diagnostico",
+      "turno:listo",
+      "turno:finalizado",
+      "turno:reagendado",
+      "turno:cancelado",
+    ];
+
+    for (const ev of backendEvents) {
+      socket.on(ev, () => {
+        syncWithBackend();
+      });
+    }
+  } catch (err) {
+    console.error("[Socket.IO] Error iniciando cliente socket:", err);
+  }
+}
+
 export const turnoStore = {
   getState: () => state,
   getServerState: () => serverState,
+  syncWithBackend,
   subscribe(l: () => void) {
     listeners.add(l);
     return () => listeners.delete(l);
@@ -54,6 +189,7 @@ export const turnoStore = {
     state = createSeedState();
     persist();
     notify([{ type: "sync" }]);
+    syncWithBackend();
   },
   hydrate() {
     if (hydrated || typeof window === "undefined") return;
@@ -80,5 +216,9 @@ export const turnoStore = {
       }
       notify(events.length ? events : [{ type: "sync" }]);
     });
+
+    // Iniciar conexión en tiempo real y sincronizar desde PostgreSQL
+    initSocket();
+    syncWithBackend();
   },
 };

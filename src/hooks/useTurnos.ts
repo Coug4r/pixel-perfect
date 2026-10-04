@@ -9,13 +9,15 @@ export function useTurnos() {
   return useMemo(() => {
     // Ordenar por última modificación (updatedAt más reciente primero)
     const turnosOrdenados = [...state.turnos].sort(ordenarPorActualizacion);
+    const activeMecanicos = state.mecanicos && state.mecanicos.length > 0 ? state.mecanicos : MECANICOS;
     return {
       ...state,
       turnos: turnosOrdenados,
-      mecanicos: MECANICOS,
+      mecanicos: activeMecanicos,
       primerGeneral: primerTurnoGeneral(state),
       getCliente: (id: string) => state.clientes.find((c) => c.id === id),
-      getMecanico: (id: string | null) => (id ? MECANICOS.find((m) => m.id === id) : undefined),
+      getMecanico: (id: string | null) =>
+        id ? activeMecanicos.find((m) => m.id === id || m.cedula === id) : undefined,
       getDiagnostico: (turnoId: string) =>
         state.diagnosticos.filter((d) => d.turnoId === turnoId).slice(-1)[0],
       getDiagnosticos: (turnoId: string) =>

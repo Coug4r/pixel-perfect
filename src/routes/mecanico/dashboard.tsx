@@ -64,23 +64,23 @@ function MecanicoDashboardPage() {
   // Total pending count
   const totalPendientes = misTurnosDirectos.length + turnosColaGeneral.length;
 
-  const handleTomarSiguiente = () => {
+  const handleTomarSiguiente = async () => {
     if (!primerGeneral || !user) {
       toast.info("No hay turnos pendientes en la cola general en este momento.");
       return;
     }
     try {
-      actions.tomarTurno(primerGeneral.id, user.id);
+      await actions.tomarTurno(primerGeneral.id, user.id);
       toast.success(`Has tomado el turno #${formatNumero(primerGeneral.numero)}.`);
     } catch (err: any) {
       toast.error(err.message || "Error al tomar el turno.");
     }
   };
 
-  const handleLlamarCliente = (turnoId: string) => {
+  const handleLlamarCliente = async (turnoId: string) => {
     if (!user) return;
     try {
-      actions.cambiarEstado(turnoId, user.id, "LLAMADO");
+      await actions.cambiarEstado(turnoId, user.id, "LLAMADO");
       toast.success("¡Cliente llamado al taller para iniciar atención!");
     } catch (err: any) {
       toast.error(err.message || "Error al llamar al cliente.");
@@ -351,9 +351,14 @@ function MecanicoDashboardPage() {
             ? diagnosticos.find((d) => d.turnoId === diagnosticoModalTurno.id)
             : undefined
         }
-        onSave={(data) => {
+        onSave={async (data) => {
           if (diagnosticoModalTurno && user) {
-            actions.registrarDiagnostico(diagnosticoModalTurno.id, user.id, data);
+            try {
+              await actions.registrarDiagnostico(diagnosticoModalTurno.id, user.id, data);
+              toast.success("Diagnóstico registrado en la base de datos.");
+            } catch (err: any) {
+              toast.error(err.message || "Error al registrar diagnóstico.");
+            }
           }
         }}
       />
@@ -362,9 +367,14 @@ function MecanicoDashboardPage() {
         open={!!reagendarModalTurno}
         onOpenChange={(open) => !open && setReagendarModalTurno(null)}
         turno={reagendarModalTurno}
-        onConfirm={(nuevaHora) => {
+        onConfirm={async (nuevaHora) => {
           if (reagendarModalTurno && user) {
-            actions.reagendar(reagendarModalTurno.id, user.id, nuevaHora);
+            try {
+              await actions.reagendar(reagendarModalTurno.id, user.id, nuevaHora);
+              toast.success("Turno reagendado en la base de datos.");
+            } catch (err: any) {
+              toast.error(err.message || "Error al reagendar turno.");
+            }
           }
         }}
       />

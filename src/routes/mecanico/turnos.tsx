@@ -97,30 +97,30 @@ function MecanicoTurnosPage() {
   const listaDiagnosticados = filterList(turnosDiagnosticados);
   const listaFinalizados = filterList(turnosFinalizados);
 
-  const handleTomarTurno = (turnoId: string) => {
+  const handleTomarTurno = async (turnoId: string) => {
     if (!user) return;
     try {
-      actions.tomarTurno(turnoId, user.id);
+      await actions.tomarTurno(turnoId, user.id);
       toast.success("Turno asignado a tu estación de trabajo.");
     } catch (err: any) {
       toast.error(err.message || "Error al tomar el turno.");
     }
   };
 
-  const handleCambiarEstado = (turnoId: string, nuevoEstado: any) => {
+  const handleCambiarEstado = async (turnoId: string, nuevoEstado: any) => {
     if (!user) return;
     try {
-      actions.cambiarEstado(turnoId, user.id, nuevoEstado);
+      await actions.cambiarEstado(turnoId, user.id, nuevoEstado);
       toast.success(`Estado del turno actualizado a ${nuevoEstado}`);
     } catch (err: any) {
       toast.error(err.message || "Error al cambiar de estado.");
     }
   };
 
-  const handleFinalizarTurno = (turnoId: string, num: number) => {
+  const handleFinalizarTurno = async (turnoId: string, num: number) => {
     if (!user) return;
     try {
-      actions.cambiarEstado(turnoId, user.id, "FINALIZADO");
+      await actions.cambiarEstado(turnoId, user.id, "FINALIZADO");
       toast.success(`Turno #${formatNumero(num)} finalizado y trasladado a Finalizados.`);
     } catch (err: any) {
       toast.error(err.message || "Error al finalizar el turno.");
@@ -404,9 +404,14 @@ function MecanicoTurnosPage() {
             ? diagnosticos.find((d) => d.turnoId === diagnosticoModalTurno.id)
             : undefined
         }
-        onSave={(data) => {
+        onSave={async (data) => {
           if (diagnosticoModalTurno && user) {
-            actions.registrarDiagnostico(diagnosticoModalTurno.id, user.id, data);
+            try {
+              await actions.registrarDiagnostico(diagnosticoModalTurno.id, user.id, data);
+              toast.success("Diagnóstico guardado en la base de datos.");
+            } catch (err: any) {
+              toast.error(err.message || "Error al guardar diagnóstico.");
+            }
           }
         }}
       />
@@ -415,9 +420,14 @@ function MecanicoTurnosPage() {
         open={!!reagendarModalTurno}
         onOpenChange={(open) => !open && setReagendarModalTurno(null)}
         turno={reagendarModalTurno}
-        onConfirm={(nuevaHora) => {
+        onConfirm={async (nuevaHora) => {
           if (reagendarModalTurno && user) {
-            actions.reagendar(reagendarModalTurno.id, user.id, nuevaHora);
+            try {
+              await actions.reagendar(reagendarModalTurno.id, user.id, nuevaHora);
+              toast.success("Turno reagendado en la base de datos.");
+            } catch (err: any) {
+              toast.error(err.message || "Error al reagendar turno.");
+            }
           }
         }}
       />

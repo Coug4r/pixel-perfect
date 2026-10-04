@@ -1,10 +1,8 @@
-import type { AuthSession } from "./types";
-import { MOCK_CREDENTIALS } from "./credentials.mock";
-import { MECANICOS } from "@/data/mecanicos";
+import type { AuthSession, Rol } from "./types";
+import { api } from "@/services/api";
 
 /**
- * Contrato de autenticación. Para conectar un backend real, crear otra clase
- * que implemente AuthService (fetch a /login, etc.) y exportarla abajo.
+ * Servicio de autenticación conectado directamente al backend PostgreSQL + JWT
  */
 export interface AuthService {
   login(cedula: string, password: string): Promise<AuthSession>;
@@ -17,61 +15,70 @@ export class AuthError extends Error {}
 const SESSION_KEY = "taller.session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
-async function sha256(text: string) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+const memoryStore = new Map<string, string>();
+
+function getStorage(key: string): string | null {
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      return localStorage.getItem(key);
+    } catch {}
+  }
+  return memoryStore.get(key) || null;
 }
 
-class MockAuthService implements AuthService {
-  async login(cedula: string, password: string): Promise<AuthSession> {
-    await new Promise((r) => setTimeout(r, 400));
-    const cred = MOCK_CREDENTIALS.find((c) => c.cedula === cedula.trim());
-    const hash = await sha256(password);
-    if (!cred || cred.passwordHash !== hash) {
-      throw new AuthError("Cédula o contraseña incorrecta.");
-    }
-
-    if (cred.role === "superadmin") {
-      const session: AuthSession = {
-        token: crypto.randomUUID(),
-        user: { id: "superadmin", cedula: cred.cedula, nombre: cred.nombre || "Super Administrador", rol: "superadmin" },
-        expiresAt: Date.now() + SESSION_TTL_MS,
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      return session;
-    }
-
-    const mecanico = MECANICOS.find((m) => m.id === cred.userId && m.activo);
-    if (!mecanico) {
-      throw new AuthError("Mecánico inactivo o no registrado.");
-    }
-
-    const session: AuthSession = {
-      token: crypto.randomUUID(),
-      user: { id: mecanico.id, cedula: mecanico.cedula, nombre: mecanico.nombre, rol: "mecanico" },
-      expiresAt: Date.now() + SESSION_TTL_MS,
-    };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    return session;
-  }
-
-  async logout() {
+function setStorage(key: string, val: string): void {
+  if (typeof window !== "undefined" && window.localStorage) {
     try {
-      localStorage.removeItem(SESSION_KEY);
+      localStorage.setItem(key, val);
+    } catch {}
+  }
+  memoryStore.set(key, val);
+}
+
+function removeStorage(key: string): void {
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      localStorage.removeItem(key);
       sessionStorage.clear();
-      // Dispatch storage event so other tabs/listeners update immediately
       window.dispatchEvent(new Event("storage"));
     } catch {}
   }
+  memoryStore.delete(key);
+}
+
+class RealAuthService implements AuthService {
+  async login(cedula: string, password: string): Promise<AuthSession> {
+    try {
+      const res = await api.auth.login(cedula.trim(), password);
+      const rolStr = res.user.rol.toLowerCase() as Rol;
+      const session: AuthSession = {
+        token: res.accessToken,
+        user: {
+          id: res.user.id,
+          cedula: res.user.identificacion,
+          nombre: `${res.user.nombre} ${res.user.apellido || ""}`.trim(),
+          rol: rolStr,
+        },
+        expiresAt: Date.now() + SESSION_TTL_MS,
+      };
+      setStorage(SESSION_KEY, JSON.stringify(session));
+      return session;
+    } catch (err: any) {
+      throw new AuthError(err.message || "Cédula o contraseña incorrecta.");
+    }
+  }
+
+  async logout() {
+    removeStorage(SESSION_KEY);
+  }
 
   getSession(): AuthSession | null {
-    if (typeof window === "undefined") return null;
     try {
-      const raw = localStorage.getItem(SESSION_KEY);
+      const raw = getStorage(SESSION_KEY);
       if (!raw) return null;
       const s = JSON.parse(raw) as AuthSession;
       if (!s?.token || !s.user || (s.user.rol !== "mecanico" && s.user.rol !== "superadmin") || s.expiresAt < Date.now()) {
-        localStorage.removeItem(SESSION_KEY);
+        removeStorage(SESSION_KEY);
         return null;
       }
       return s;
@@ -82,4 +89,5 @@ class MockAuthService implements AuthService {
 }
 
 export const AUTH_STORAGE_KEY = SESSION_KEY;
-export const authService: AuthService = new MockAuthService();
+export const authService: AuthService = new RealAuthService();
+

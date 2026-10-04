@@ -7,7 +7,17 @@ let io: SocketIOServer | null = null;
 export function initWebSocket(httpServer: HttpServer): SocketIOServer {
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: env.FRONTEND_URL,
+      origin: (origin, callback) => {
+        if (
+          !origin ||
+          origin === env.FRONTEND_URL ||
+          /^http:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(origin)
+        ) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origen Socket.IO no permitido por CORS: ${origin}`));
+        }
+      },
       methods: ["GET", "POST", "PATCH"],
       credentials: true,
     },

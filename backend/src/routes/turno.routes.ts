@@ -20,7 +20,10 @@ import { crearCalificacionSchema } from "../validators/calificacion.validator.js
 
 export const turnoRouter = Router();
 
-// --- Rutas públicas para Clientes (SIN JWT) ---
+// --- Rutas públicas para Clientes y Pantallas del Sistema (SIN JWT) ---
+turnoRouter.get("/", turnoController.listar);
+turnoRouter.get("/mecanicos", turnoController.listarMecanicos);
+
 turnoRouter.post(
   "/",
   validateBody(crearTurnoSchema),
@@ -63,6 +66,14 @@ turnoRouter.post(
   validateParams(turnoIdParamSchema),
   validateBody(crearDiagnosticoSchema),
   diagnosticoController.crear
+);
+
+turnoRouter.patch(
+  "/:id/llamar",
+  requireAuth,
+  requireRole(RolUsuario.MECANICO),
+  validateParams(turnoIdParamSchema),
+  turnoController.llamar
 );
 
 turnoRouter.patch(

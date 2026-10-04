@@ -345,6 +345,56 @@ export const turnoService = {
   },
 
   /**
+   * Llamar al cliente para iniciar atención en el taller
+   */
+  async llamarCliente(turnoId: string, mecanicoId: string) {
+    return await prisma.$transaction(async (tx) => {
+      const turno = await tx.turno.findUnique({
+        where: { id: turnoId },
+        include: { cliente: true },
+      });
+
+      if (!turno) {
+        throw new NotFoundError("Turno no encontrado");
+      }
+
+      if (turno.mecanicoId && turno.mecanicoId !== mecanicoId) {
+        throw new ForbiddenError("No puedes llamar un turno asignado a otro mecánico");
+      }
+
+      const estadoAnterior = turno.estado;
+      const turnoActualizado = await tx.turno.update({
+        where: { id: turnoId },
+        data: {
+          estado: EstadoTurno.LLAMADO,
+          updatedAt: new Date(),
+        },
+        include: {
+          cliente: true,
+          vehiculo: true,
+          mecanicoAsignado: {
+            select: { id: true, nombre: true, apellido: true },
+          },
+        },
+      });
+
+      await tx.historialTurno.create({
+        data: {
+          turnoId,
+          usuarioId: mecanicoId,
+          accion: AccionHistorial.ATENCION_INICIADA,
+          estadoAnterior,
+          estadoNuevo: EstadoTurno.LLAMADO,
+        },
+      });
+
+      socketEvents.emitTurnoActualizado(turnoActualizado);
+
+      return turnoActualizado;
+    });
+  },
+
+  /**
    * Marcar vehículo listo para entrega
    */
   async marcarListo(turnoId: string, mecanicoId: string) {
@@ -581,6 +631,50 @@ export const turnoService = {
       socketEvents.emitTurnoActualizado(turnoActualizado);
 
       return turnoActualizado;
+    });
+  },
+
+  /**
+   * Listar todos los turnos con relaciones (para sincronización del front y pantallas generales)
+   */
+  async listarTurnos(filtro?: { fecha?: string; estado?: EstadoTurno; mecanicoId?: string }) {
+    return await prisma.turno.findMany({
+      where: {
+        ...(filtro?.estado ? { estado: filtro.estado } : {}),
+        ...(filtro?.mecanicoId ? { mecanicoId: filtro.mecanicoId } : {}),
+        ...(filtro?.fecha ? { fecha: filtro.fecha } : {}),
+      },
+      include: {
+        cliente: true,
+        vehiculo: true,
+        mecanicoAsignado: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            identificacion: true,
+          },
+        },
+        mecanicoPreferido: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            identificacion: true,
+          },
+        },
+        diagnosticos: {
+          orderBy: { createdAt: "asc" },
+        },
+        calificacion: true,
+        historial: {
+          orderBy: { createdAt: "desc" },
+        },
+        notificaciones: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
     });
   },
 };

@@ -87,4 +87,5 @@ export interface TallerState {
   diagnosticos: Diagnostico[];
   notificaciones: Notificacion[];
   calificaciones: Calificacion[];
+  mecanicos?: Mecanico[];
 }

@@ -4,6 +4,35 @@ import { apiResponse } from "../utils/response.js";
 import type { AuthenticatedRequest } from "../types/index.js";
 
 export const turnoController = {
+  async listar(req: Request, res: Response, next: NextFunction) {
+    try {
+      const turnos = await turnoService.listarTurnos(req.query as any);
+      return apiResponse.success(res, turnos, 200);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async listarMecanicos(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const { prisma } = await import("../config/prisma.js");
+      const mecanicos = await prisma.usuario.findMany({
+        where: { rol: "MECANICO", activo: true },
+        select: {
+          id: true,
+          nombre: true,
+          apellido: true,
+          identificacion: true,
+          disponible: true,
+        },
+        orderBy: { nombre: "asc" },
+      });
+      return apiResponse.success(res, mecanicos, 200);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async crear(req: Request, res: Response, next: NextFunction) {
     try {
       const turno = await turnoService.crearTurno(req.body);
@@ -27,6 +56,17 @@ export const turnoController = {
       const { id } = req.params;
       const mecanicoId = req.user!.userId;
       const turno = await turnoService.tomarTurno(id!, mecanicoId);
+      return apiResponse.success(res, turno, 200);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async llamar(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const mecanicoId = req.user!.userId;
+      const turno = await turnoService.llamarCliente(id!, mecanicoId);
       return apiResponse.success(res, turno, 200);
     } catch (error) {
       next(error);

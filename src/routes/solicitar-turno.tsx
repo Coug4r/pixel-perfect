@@ -106,7 +106,7 @@ function SolicitarTurnoPage() {
     setPlaca(formatted);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isIdentificacionValid) {
       toast.error(
@@ -135,7 +135,7 @@ function SolicitarTurnoPage() {
 
     setIsSubmitting(true);
     try {
-      const nuevoTurno = actions.crearTurno({
+      const nuevoTurno = await actions.crearTurno({
         tipoIdentificacion,
         identificacion: identificacion.trim(),
         nombre: nombre.trim(),
